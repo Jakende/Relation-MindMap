@@ -1,0 +1,35 @@
+{
+  "nodes": [
+    { "id": "Projektleitung" },
+    { "id": "Entwicklung" },
+    { "id": "Frontend" },
+    { "id": "Backend" },
+    { "id": "QA" },
+    { "id": "Marketing" },
+    { "id": "Online-Marketing" },
+    { "id": "Events" },
+    { "id": "Kunde" },
+    { "id": "Support" },
+    { "id": "Helpdesk" },
+    { "id": "2nd-Level" }
+  ],
+  "links": [
+    { "source": "Projektleitung", "target": "Entwicklung", "type": "koordiniert" },
+    { "source": "Projektleitung", "target": "Marketing", "type": "koordiniert" },
+    { "source": "Entwicklung", "target": "Frontend", "type": "leitet" },
+    { "source": "Entwicklung", "target": "Backend", "type": "leitet" },
+    { "source": "Entwicklung", "target": "QA", "type": "leitet" },
+    { "source": "Marketing", "target": "Online-Marketing", "type": "leitet" },
+    { "source": "Marketing", "target": "Events", "type": "leitet" },
+    { "source": "Frontend", "target": "QA", "type": "testet" },
+    { "source": "Backend", "target": "QA", "type": "testet" },
+    { "source": "Frontend", "target": "Kunde", "type": "liefert" },
+    { "source": "Backend", "target": "Kunde", "type": "liefert" },
+    { "source": "Online-Marketing", "target": "Kunde", "type": "kommuniziert" },
+    { "source": "Events", "target": "Kunde", "type": "kommuniziert" },
+    { "source": "Kunde", "target": "Support", "type": "fragt" },
+    { "source": "Support", "target": "Helpdesk", "type": "eskaliert" },
+    { "source": "Helpdesk", "target": "2nd-Level", "type": "eskaliert" }
+  ],
+  "info": "Beispiel für ein importierbares Mindmap-JSON mit mehreren Hierarchieebenen. Die Struktur ist sowohl als Tree (über die 'leitet'-Beziehungen) als auch als Graph (durch weitere Relationen) darstellbar."
+}

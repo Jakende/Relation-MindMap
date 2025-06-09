@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>mind - mapping</title>
+  <script src="https://d3js.org/d3.v6.min.js" defer></script>
+  <script src="mindmap.js" type="module" defer></script>
+  <style>
+    :root {
+      --palette-primary: #0074d9;
+      --palette-accent: #4fc3f7;
+      --palette-bg: #f9f9fb;
+      --palette-dark-bg: #181a1b;
+      --palette-text: #222;
+      --palette-dark-text: #f1f1f1;
+      --palette-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+      --palette-btn-radius: 8px;
+      --palette-btn-padding: 12px 20px;
+      --palette-btn-gap: 12px;
+      --palette-focus-outline: 3px solid #ff9800;
+      --palette-tooltip-border: 1.5px solid #0074d9;
+      --palette-tooltip-dark-border: 1.5px solid #4fc3f7;
+      --palette-scrollbar-thumb: #b3c6e0;
+      --palette-scrollbar-thumb-dark: #444;
+      --palette-scrollbar-bg: #f1f1f1;
+      --palette-scrollbar-bg-dark: #222;
+    }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      font-family: 'Roboto', Arial, sans-serif;
+      font-size: 16px;
+      color: var(--palette-text);
+      background: var(--palette-bg);
+      transition: background 0.5s cubic-bezier(.4,0,.2,1), color 0.5s cubic-bezier(.4,0,.2,1);
+    }
+    body.dark-mode, html.dark-mode {
+      background: var(--palette-dark-bg);
+      color: var(--palette-dark-text);
+    }
+    svg { width: 100%; height: 100%; display: block; }
+    .link { stroke: #666; stroke-opacity: 0.6; stroke-width: 1.5px; }
+    .link.type-regulates { stroke: #e53935; }
+    .link.type-contracts { stroke: #43a047; }
+    .link.type-influences { stroke: #1e88e5; }
+    .link.type-supports { stroke: #fbc02d; }
+    .link.type-default { stroke: #666; }
+    .node circle { stroke: #fff; stroke-width: 1.5px; }
+    .node.center circle {
+      stroke-width: 4px;
+      stroke: #111;
+      filter: drop-shadow(var(--palette-shadow));
+      transition: stroke 0.3s;
+    }
+    body.dark-mode .node.center circle {
+      stroke: #fff;
+      filter: drop-shadow(var(--palette-shadow));
+    }
+    .node text {
+      font-family: 'Roboto', Arial, sans-serif;
+      font-size: 15px;
+      pointer-events: none;
+      text-anchor: middle;
+      fill: var(--palette-text);
+      font-weight: 400;
+      opacity: 0;
+      text-shadow: 0 1px 2px #fff, 0 0 2px #fff, 0 0 4px #fff;
+      transition: fill 0.3s, opacity 0.3s, text-shadow 0.3s;
+      paint-order: stroke fill;
+      stroke: #fff;
+      stroke-width: 2px;
+      stroke-opacity: 0.7;
+    }
+    body.dark-mode .node text {
+      fill: var(--palette-dark-text);
+      text-shadow: 0 1px 2px #222, 0 0 2px #222, 0 0 4px #222;
+      stroke: #222;
+      stroke-width: 2px;
+      stroke-opacity: 0.7;
+    }
+    .node.selected text {
+      opacity: 1 !important;
+      stroke-width: 3px;
+      stroke-opacity: 0.9;
+    }
+    .node:hover text {
+      opacity: 1 !important;
+      stroke-width: 3px;
+      stroke-opacity: 0.9;
+    }
+    #info-bar {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.97);
+      border-top: 1px solid #ccc;
+      font-size: 17px;
+      padding: 12px 24px;
+      min-height: 36px;
+      z-index: 10;
+      pointer-events: none;
+      white-space: pre-line;
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: flex-start;
+      color: #1a1a1a;
+      transition: background 0.5s, color 0.5s;
+      border-radius: 10px;
+    }
+    body.dark-mode #info-bar {
+      background: rgba(24,26,27,0.97);
+      color: #f1f1f1;
+      border-top: 1px solid #333;
+    }
+    #info-bar .path { font-weight: 500; color: var(--palette-primary); }
+    #info-bar .node { color: #0074d9; font-weight: 400; }
+    body.dark-mode #info-bar .path { color: #7ecbff; }
+    body.dark-mode #info-bar .node { color: #4fc3f7; }
+    #info-bar .desc {
+      margin-left: 18px;
+      font-size: 15px;
+      opacity: 0.85;
+    }
+    body.dark-mode #info-bar .desc { color: #bbb; }
+    #search-bar {
+      position: fixed; left: 0; top: 0;
+      background: rgba(255,255,255,0.7);
+      border-bottom: 1px solid #ccc;
+      padding: 12px 24px 14px;
+      display: flex; flex-direction: column;
+      gap: 8px;
+      width: 480px; max-width: 98vw;
+      box-shadow: 0 0 16px rgba(0,0,0,0.08);
+      backdrop-filter: blur(8px);
+      border-radius: 10px;
+    }
+    body.dark-mode #search-bar {
+      background: rgba(24,26,27,0.85);
+      border-bottom: 1px solid #333;
+      color: #f1f1f1;
+    }
+    #search-bar input, #search-bar button {
+      font-size: 17px; min-height: 48px;
+    }
+    #search-bar input {
+      width: 70%; max-width: 320px;
+      padding: 12px 16px;
+      border: 1px solid #bbb;
+      border-radius: var(--palette-btn-radius);
+      background: rgba(255,255,255,0.8);
+      outline: none;
+    }
+    #search-bar input:focus {
+      border: 1.5px solid var(--palette-primary);
+      background: #fff;
+    }
+    body.dark-mode #search-bar input {
+      background: rgba(34,36,37,0.95);
+      border: 1px solid #444;
+    }
+    body.dark-mode #search-bar input:focus {
+      border: 1.5px solid var(--palette-accent);
+      background: rgba(34,36,37,1);
+    }
+    #search-bar button {
+      padding: 12px 22px;
+      border: none;
+      border-radius: var(--palette-btn-radius);
+      background: rgba(0,116,217,0.12);
+      color: var(--palette-primary);
+      font-weight: 500;
+      cursor: pointer;
+    }
+    #search-bar button:hover, #search-bar button:focus {
+      background: var(--palette-primary);
+      color: #fff;
+      outline: 2px solid var(--palette-primary);
+    }
+    body.dark-mode #search-bar button {
+      background: rgba(79,195,247,0.12);
+      color: var(--palette-accent);
+    }
+    body.dark-mode #search-bar button:hover, body.dark-mode #search-bar button:focus {
+      background: var(--palette-accent);
+      color: #222;
+      outline: 2px solid var(--palette-accent);
+    }
+    #search-results {
+      max-width: 440px;
+      margin-top: 0;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #eee;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 6px 10px;
+      max-height: 180px;
+      overflow-y: auto;
+      display: none;
+      font-size: 15px;
+    }
+    body.dark-mode #search-results {
+      background: rgba(34,36,37,0.97);
+      border: 1px solid #333;
+      color: #f1f1f1;
+    }
+    .search-result { padding: 8px 0; cursor: pointer; }
+    .search-result:hover { background: #e6f7ff; }
+    body.dark-mode .search-result:hover { background: #54788a; }
+    .search-highlight {
+      font-weight: 700;
+      background: #cde0e8;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+    body.dark-mode .search-highlight {
+      background: #263238;
+      color: var(--palette-accent);
+    }
+    #darkmode-toggle, #palette-toggle, #export-toggle, #import-toggle, #clear-toggle, #edit-toggle, #fullscreen-toggle, #showall-toggle, #graphmode-toggle {
+      position: fixed; right: 24px; width: 44px; height: 44px;
+      border: none; border-radius: 50%;
+      background: rgba(0,0,0,0.08);
+      color: var(--palette-primary);
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      backdrop-filter: blur(8px);
+    }
+    #export-toggle { top: 18px; }
+    #import-toggle { top: 64px; }
+    #edit-toggle { top: 110px; }
+    #clear-toggle { top: 156px; }
+    #graphmode-toggle { top: 202px; }
+
+    #fullscreen-toggle { bottom: 64px; }
+    #showall-toggle    { bottom: 110px; }
+    #palette-toggle    { bottom: 156px; }
+    #darkmode-toggle   { bottom: 202px; }
+    #darkmode-toggle:hover, #palette-toggle:hover, #export-toggle:hover, #import-toggle:hover, #clear-toggle:hover, #edit-toggle:hover, #fullscreen-toggle:hover, #showall-toggle:hover, #graphmode-toggle:hover {
+      background: var(--palette-primary);
+      color: #fff;
+      outline: 2px solid var(--palette-primary);
+    }
+    body.dark-mode #darkmode-toggle,
+    body.dark-mode #palette-toggle,
+    body.dark-mode #export-toggle,
+    body.dark-mode #import-toggle,
+    body.dark-mode #clear-toggle,
+    body.dark-mode #edit-toggle,
+    body.dark-mode #fullscreen-toggle,
+    body.dark-mode #showall-toggle,
+    body.dark-mode #graphmode-toggle {
+      background: rgba(255,255,255,0.08);
+      color: var(--palette-accent);
+    }
+    body.dark-mode #darkmode-toggle:hover,
+    body.dark-mode #palette-toggle:hover,
+    body.dark-mode #export-toggle:hover,
+    body.dark-mode #import-toggle:hover,
+    body.dark-mode #clear-toggle:hover,
+    body.dark-mode #edit-toggle:hover,
+    body.dark-mode #fullscreen-toggle:hover,
+    body.dark-mode #showall-toggle:hover,
+    body.dark-mode #graphmode-toggle:hover {
+      background: var(--palette-accent);
+      color: #222;
+      outline: 2px solid var(--palette-accent);
+    }
+    #palette-menu, .export-bar {
+      position: fixed; right: 24px; display: none;
+      flex-direction: column; gap: 10px;
+      padding: 16px 18px;
+      background: rgba(255,255,255,0.98);
+      border: 1px solid #eee;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    #palette-menu { top: 110px; }
+    .export-bar { top: 164px; }
+    body.dark-mode #palette-menu,
+    body.dark-mode .export-bar {
+      background: rgba(34,36,37,0.97);
+      border: 1px solid #333;
+      color: #f1f1f1;
+    }
+    .palette-btn, .export-btn {
+      padding: 10px 20px;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      background: #f7f7fa;
+      color: #0074d9;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      min-width: 140px; min-height: 44px;
+    }
+    .palette-btn:hover, .export-btn:hover {
+      background: var(--palette-primary);
+      color: #fff;
+      border: 1.5px solid var(--palette-primary);
+      outline: 2px solid var(--palette-primary);
+    }
+    body.dark-mode .palette-btn, body.dark-mode .export-btn {
+      background: #23272b;
+      color: #4fc3f7;
+      border: 1px solid #444;
+    }
+    body.dark-mode .palette-btn:hover, body.dark-mode .export-btn:hover {
+      background: #4fc3f7;
+      color: #222;
+      border: 1.5px solid #4fc3f7;
+      outline: 2px solid #4fc3f7;
+    }
+    #editor-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 50vw;
+      height: 100vh;
+      background: #fff;
+      z-index: 100;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+      backdrop-filter: blur(8px);
+    }
+    #editor-container textarea {
+      width: 100%;
+      height: 100%;
+      font-size: 16px;
+      font-family: monospace;
+      border: none;
+      outline: none;
+      padding: 16px;
+      box-sizing: border-box;
+      resize: none;
+    }
+    #close-editor {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 101;
+      background: #fff;
+      color: #0074d9;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: background 0.3s, color 0.3s;
+      backdrop-filter: blur(8px);
+    }
+    #close-editor:hover {
+      background: #0074d9;
+      color: #fff;
+      border: 1.5px solid #0074d9;
+    }
+    body.dark-mode #editor-container {
+      background: #23272b;
+      border-right: 2px solid #444;
+    }
+    body.dark-mode #markdown-editor {
+      background: #23272b;
+      color: #f1f1f1;
+    }
+    body.dark-mode #markdown-editor:focus {
+      background: #181a1b;
+      border: 1.5px solid #4fc3f7;
+      outline: 2px solid #0074d9;
+    }
+    body.dark-mode #close-editor {
+      background: #23272b;
+      color: #4fc3f7;
+      border: 1px solid #444;
+    }
+    body.dark-mode #close-editor:hover {
+      background: #4fc3f7;
+      color: #222;
+      border: 1.5px solid #4fc3f7;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top right group: -->
+  <button id="export-toggle" title="Exportoptionen anzeigen" aria-label="Exportoptionen anzeigen">⬇️</button>
+  <button id="import-toggle" title="Datei importieren" aria-label="Datei importieren">📁</button>
+  <button id="edit-toggle" title="Markdown Editor anzeigen" aria-label="Markdown Editor anzeigen">✏️</button>
+  <button id="clear-toggle" title="Mindmap leeren" aria-label="Mindmap leeren">🗑️</button>
+  <button id="graphmode-toggle" title="Graph/Tree Layout umschalten" aria-label="Graph/Tree Layout umschalten">🔄</button>
+
+  <!-- Bottom right group: -->
+  <button id="fullscreen-toggle" title="Vollbildmodus umschalten" aria-label="Vollbildmodus umschalten">⛶</button>
+  <button id="showall-toggle" title="Alle Texte anzeigen/ausblenden" aria-label="Alle Texte anzeigen/ausblenden">🅰️</button>
+  <button id="darkmode-toggle" title="Dark Mode umschalten" aria-label="Dark Mode umschalten">🌙</button>
+  <button id="palette-toggle" title="Farbschema auswählen" aria-label="Farbschema auswählen">🎨</button>
+
+  <input type="file" id="import-file" accept=".md,.json" style="display:none" />
+
+  <div id="palette-menu" role="menu" aria-label="Farbschema wählen" style="display:none;flex-direction:column;gap:10px;">
+    <div class="palette-title">Farbschema wählen</div>
+    <button class="palette-btn" data-scheme="category10">Klassisch (Standard)</button>
+    <button class="palette-btn" data-scheme="accent">Frisch & Akzentuiert</button>
+    <button class="palette-btn" data-scheme="dark2">Dunkel & Kontrastreich</button>
+    <button class="palette-btn" data-scheme="set2">Pastell & Ruhig</button>
+    <button class="palette-btn" data-scheme="greys">Graustufen</button>
+    <button class="palette-btn" data-scheme="bw">Schwarz & Weiß</button>
+    <button class="palette-btn" data-scheme="cb-friendly">Farbenblind-freundlich</button>
+  </div>
+
+  <div class="export-bar" id="export-bar" style="display:none;flex-direction:column;gap:10px;">
+    <button class="export-btn" id="export-json">Export JSON</button>
+    <button class="export-btn" id="export-md">Export .md</button>
+  </div>
+
+  <div id="search-bar" role="search" aria-label="Suche Stakeholder" style="display:flex;flex-direction:column;gap:8px;">
+    <input id="search-input" type="text" placeholder="Suche oder Frage stellen..." autocomplete="off">
+    <div>
+      <button id="search-btn">Suchen</button>
+      <button id="reset-btn">Zurücksetzen</button>
+    </div>
+    <div id="search-results" role="listbox"></div>
+  </div>
+
+  <div id="editor-container" style="display:none; position:fixed; top:0; left:0; width:50vw; height:100vh; background:#fff; z-index:100; box-shadow:2px 0 8px rgba(0,0,0,0.08); backdrop-filter:blur(8px);">
+    <textarea id="markdown-editor" style="width:100%; height:100%; font-size:16px; font-family:monospace; border:none; outline:none; padding:16px; box-sizing:border-box; resize:none;"></textarea>
+    <button id="close-editor" style="position:absolute; top:10px; right:10px; z-index:101;">Schließen</button>
+  </div>
+
+  <svg></svg>
+  <div id="info-bar"></div>
+</body>
+</html>
