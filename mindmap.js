@@ -10,6 +10,11 @@ let stickyNodesEnabled = true; // Standardmäßig ist Fixierung aktiv
 let totalEnabled = false;      // Total-Modus deaktiviert
 let fixedNodes = [];          // Array to track fixed nodes
 
+let editorInstance = null;
+let scrollSyncEnabled = true;
+let editorWidth = 50; // in vw when editor is open
+let editorSelection = null; // remembers cursor position when editor closes
+
 const colorSchemes = {
   category10: d3.schemeCategory10,
   accent: d3.schemeAccent,
@@ -53,6 +58,25 @@ function loadSettingsToSliders() {
     document.getElementById('slider-collision').value = graphSettings.collision;
     document.getElementById('slider-nodetextsize').value = graphSettings.nodeTextSize; // NEU
   }
+}
+
+function loadLastContent() {
+  return localStorage.getItem('mindmapMarkdown') || '';
+}
+
+function saveLastContent(content) {
+  localStorage.setItem('mindmapMarkdown', content);
+}
+
+function updateEditorWidth(width) {
+  const svg = document.querySelector('svg');
+  svg.style.left = width + 'vw';
+  svg.style.width = (100 - width) + 'vw';
+  svg.style.height = '100vh';
+  document.getElementById('info-bar').style.left = width + 'vw';
+  document.getElementById('info-bar').style.width = (100 - width) + 'vw';
+  document.getElementById('editor-container').style.width = width + 'vw';
+  if (editorInstance) editorInstance.layout();
 }
 
 // === Exporte / Hilfsfunktionen ===
@@ -821,7 +845,7 @@ function centerGraphOrTree(retry = 0) {
   const g = svg.select('g');
   if (!g.empty()) {
     const bbox = g.node().getBBox();
-    const isEditorOpen = document.body.classList.contains('editor-open');
+    const isEditorOpen = !document.getElementById('editor-container').classList.contains('is-hidden');
     const width = window.innerWidth;
     const height = window.innerHeight;
     if ((bbox.width < 10 || bbox.height < 10) && retry < 10) {
@@ -832,18 +856,14 @@ function centerGraphOrTree(retry = 0) {
     let graphCenterX = bbox.width > 0 ? bbox.x + bbox.width / 2 : 0;
     let graphCenterY = bbox.height > 0 ? bbox.y + bbox.height / 2 : 0;
     if (isEditorOpen) {
-      // Begrenzung: Graph muss komplett in rechter Hälfte (50vw bis 100vw) sichtbar sein
-      const rightHalfStart = width / 2;
-      const rightHalfEnd = width;
-      // Ziel: Graph möglichst mittig in rechter Hälfte, aber nicht hinausragen
-      let offsetX = rightHalfStart + (rightHalfEnd - rightHalfStart) / 2 - graphCenterX;
-      // Linksbegrenzung: bbox.x >= rightHalfStart
-      if (bbox.x + offsetX < rightHalfStart) {
-        offsetX = rightHalfStart - bbox.x;
+      const start = width * (editorWidth / 100);
+      const end = width;
+      let offsetX = start + (end - start) / 2 - graphCenterX;
+      if (bbox.x + offsetX < start) {
+        offsetX = start - bbox.x;
       }
-      // Rechtsbegrenzung: bbox.x + bbox.width <= rightHalfEnd
-      if (bbox.x + bbox.width + offsetX > rightHalfEnd) {
-        offsetX = rightHalfEnd - (bbox.x + bbox.width);
+      if (bbox.x + bbox.width + offsetX > end) {
+        offsetX = end - (bbox.x + bbox.width);
       }
       svg.transition().duration(0)
         .call(
@@ -964,9 +984,85 @@ function loadDataAndRender(data, hierarchy) {
   }
 }
 
+function setupEditor() {
+  return new Promise(resolve => {
+    if (typeof require === 'undefined') return resolve();
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
+    require(['vs/editor/editor.main'], () => {
+      const container = document.getElementById('editor');
+      const preview = document.getElementById('preview');
+      const output = document.getElementById('output');
+      editorInstance = monaco.editor.create(container, {
+        value: loadLastContent(),
+        language: 'markdown',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        wordWrap: 'on',
+        scrollBeyondLastLine: false
+      });
+
+      const render = () => {
+        const md = editorInstance.getValue();
+        lastMarkdown = md;
+        saveLastContent(md);
+        const html = DOMPurify.sanitize(marked.parse(md));
+        output.innerHTML = html;
+        const parsed = parseMarkdownToGraph(md);
+        currentGraph = parsed;
+        currentHierarchy = parseMarkdownToHierarchy(md);
+        loadDataAndRender(currentGraph, currentHierarchy);
+        setTimeout(() => { centerGraphOrTree(); }, 0);
+      };
+      editorInstance.onDidChangeModelContent(render);
+      render();
+
+      const syncCb = document.getElementById('scroll-sync');
+      if (syncCb) {
+        syncCb.checked = true;
+        syncCb.addEventListener('change', () => { scrollSyncEnabled = syncCb.checked; });
+      }
+      editorInstance.onDidScrollChange(e => {
+        if (!scrollSyncEnabled) return;
+        const ratio = e.scrollTop / (e.scrollHeight - editorInstance.getLayoutInfo().height);
+        preview.scrollTop = (preview.scrollHeight - preview.clientHeight) * ratio;
+      });
+      preview.addEventListener('scroll', () => {
+        if (!scrollSyncEnabled) return;
+        const ratio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight);
+        editorInstance.setScrollTop((editorInstance.getScrollHeight() - editorInstance.getLayoutInfo().height) * ratio);
+      });
+
+      document.getElementById('editor-reset').addEventListener('click', () => {
+        if (confirm('Reset editor content?')) {
+          editorInstance.setValue('');
+        }
+      });
+      document.getElementById('editor-copy').addEventListener('click', () => {
+        navigator.clipboard.writeText(editorInstance.getValue());
+      });
+
+      const toggleViewBtn = document.getElementById('toggle-view');
+      const editorDiv = document.getElementById('editor');
+      const previewDiv = document.getElementById('preview');
+      toggleViewBtn.addEventListener('click', () => {
+        const showingEditor = !editorDiv.classList.contains('is-hidden');
+        if (showingEditor) {
+          editorDiv.classList.add('is-hidden');
+          previewDiv.classList.remove('is-hidden');
+          toggleViewBtn.textContent = 'Edit';
+        } else {
+          previewDiv.classList.add('is-hidden');
+          editorDiv.classList.remove('is-hidden');
+          toggleViewBtn.textContent = 'Preview';
+        }
+      });
+      resolve();
+    });
+  });
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   // === DOM References ===
-  const markdownEditor = document.getElementById('markdown-editor');
   const paletteToggle = document.getElementById('palette-toggle');
   const paletteMenu = document.getElementById('palette-menu');
   const exportToggle = document.getElementById('export-toggle');
@@ -983,6 +1079,26 @@ window.addEventListener('DOMContentLoaded', () => {
   const importFile = document.getElementById('import-file');
   const clearToggle = document.getElementById('clear-toggle');
   const stickyNodesToggle = document.getElementById('sticky-nodes-toggle');
+  const resizeHandle = document.getElementById('editor-resizer');
+  let isResizing = false;
+
+  resizeHandle.addEventListener('mousedown', e => {
+    isResizing = true;
+    resizeHandle.classList.add('active');
+  });
+  document.addEventListener('mousemove', e => {
+    if (!isResizing) return;
+    editorWidth = Math.min(80, Math.max(20, e.clientX / window.innerWidth * 100));
+    updateEditorWidth(editorWidth);
+  });
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      resizeHandle.classList.remove('active');
+    }
+  });
+
+  setupEditor();
 
   // --- Export-Button ---
   exportToggle.addEventListener('click', (e) => {
@@ -1012,7 +1128,7 @@ window.addEventListener('DOMContentLoaded', () => {
               currentGraph = json;
               currentHierarchy = null;
               lastMarkdown = '';
-              markdownEditor.value = '';
+              if (editorInstance) editorInstance.setValue('');
               loadDataAndRender(currentGraph, currentHierarchy);
               setTimeout(() => {
                 centerGraphOrTree();
@@ -1030,7 +1146,7 @@ window.addEventListener('DOMContentLoaded', () => {
         } else if (ext === 'md') {
           const md = evt.target.result;
           lastMarkdown = md;
-          markdownEditor.value = md;
+          if (editorInstance) editorInstance.setValue(md);
           const parsed = parseMarkdownToGraph(md);
           currentGraph = parsed;
           currentHierarchy = parseMarkdownToHierarchy(md);
@@ -1058,26 +1174,28 @@ window.addEventListener('DOMContentLoaded', () => {
     exportBar.classList.add('is-hidden');
     exportToggle.classList.remove('toggle-btn--active');
     if (isOpen) {
-      if (currentGraph && currentGraph.nodes && currentGraph.links) {
-        markdownEditor.value = toMd(currentGraph.nodes, currentGraph.links);
-      } else if (currentHierarchy) {
-        function toAd(node, indent = 0) {
-          let out = " ".repeat(indent) + "- " + node.name + "\n";
-          if (node.children) {
-            for (const c of node.children) out += toAd(c, indent + 4);
+      if (editorInstance && editorInstance.getValue().trim() === '') {
+        if (currentGraph && currentGraph.nodes && currentGraph.links) {
+          editorInstance.setValue(toMd(currentGraph.nodes, currentGraph.links));
+        } else if (currentHierarchy) {
+          function toAd(node, indent = 0) {
+            let out = " ".repeat(indent) + "- " + node.name + "\n";
+            if (node.children) {
+              for (const c of node.children) out += toAd(c, indent + 4);
+            }
+            return out;
           }
-          return out;
+          editorInstance.setValue(toAd(currentHierarchy));
+        } else {
+          editorInstance.setValue('');
         }
-        markdownEditor.value = toAd(currentHierarchy);
-      } else {
-        markdownEditor.value = '';
       }
       document.querySelector('svg').style.position = 'fixed';
-      document.querySelector('svg').style.left = '50vw';
-      document.querySelector('svg').style.width = '50vw';
-      document.querySelector('svg').style.height = '100vh';
-      markdownEditor.focus();
+      updateEditorWidth(editorWidth);
+      if (editorSelection && editorInstance) editorInstance.setPosition(editorSelection);
+      if (editorInstance) editorInstance.focus();
     } else {
+      if (editorInstance) editorSelection = editorInstance.getPosition();
       document.querySelector('svg').style.position = '';
       document.querySelector('svg').style.left = '';
       document.querySelector('svg').style.width = '';
@@ -1086,12 +1204,19 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   closeEditor.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (editorInstance) editorSelection = editorInstance.getPosition();
     editorContainer.classList.add('is-hidden');
     editToggle.classList.remove('toggle-btn--active');
     document.querySelector('svg').style.position = '';
     document.querySelector('svg').style.left = '';
     document.querySelector('svg').style.width = '';
     document.querySelector('svg').style.height = '';
+    document.getElementById('info-bar').style.left = '';
+    document.getElementById('info-bar').style.width = '';
+    document.getElementById('editor-container').style.width = '';
+    document.getElementById('editor').classList.remove('is-hidden');
+    document.getElementById('preview').classList.add('is-hidden');
+    document.getElementById('toggle-view').textContent = 'Preview';
   });
   // --- Clear-Button ---
   clearToggle.addEventListener('click', (e) => {
@@ -1129,6 +1254,11 @@ window.addEventListener('DOMContentLoaded', () => {
     } else {
       document.exitFullscreen();
     }
+    setTimeout(centerGraphOrTree, 200);
+  });
+  document.addEventListener('fullscreenchange', () => {
+    const fs = !!document.fullscreenElement;
+    document.body.classList.toggle('fullscreen-ui', fs);
     setTimeout(centerGraphOrTree, 200);
   });
   // --- ShowAll-Button (Texte ein-/ausblenden) ---
@@ -1232,6 +1362,7 @@ window.addEventListener('DOMContentLoaded', () => {
       exportToggle.classList.remove('toggle-btn--active');
     }
     if (!editorContainer.contains(e.target) && e.target !== editToggle) {
+      if (editorInstance) editorSelection = editorInstance.getPosition();
       editorContainer.classList.add('is-hidden');
       editToggle.classList.remove('toggle-btn--active');
       document.querySelector('svg').style.position = '';
@@ -1269,178 +1400,6 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   // --- Initiales Laden ---
   loadCurrentData();
-  // --- Live Markdown Editor: Live-Update Graph/Tree on Edit ---
-  let liveEditTimeout = null;
-  markdownEditor.addEventListener('input', function() {
-    if (liveEditTimeout) clearTimeout(liveEditTimeout);
-    liveEditTimeout = setTimeout(() => {
-      const md = markdownEditor.value;
-      lastMarkdown = md;
-      // Parse Markdown to Data
-      const parsed = parseMarkdownToGraph(md);
-      currentGraph = parsed;
-      currentHierarchy = parseMarkdownToHierarchy(md);
-      // Render
-      loadDataAndRender(currentGraph, currentHierarchy);
-      // Center and fade-in
-      setTimeout(() => {
-        centerGraphOrTree();
-        d3.select('svg').style('opacity', 1);
-      }, 0);
-    }, 200); // debounce: 200ms
-  });
-  const editor = document.getElementById('markdown-editor');
-  if (editor) {
-    // Undo/Redo Stack für Editor
-    let undoStack = [];
-    let redoStack = [];
-    let lastValue = editor.value;
-    let lastSelection = { start: editor.selectionStart, end: editor.selectionEnd };
-    function pushUndo() {
-      undoStack.push({
-        value: editor.value,
-        selectionStart: editor.selectionStart,
-        selectionEnd: editor.selectionEnd
-      });
-      // Stack begrenzen
-      if (undoStack.length > 100) undoStack.shift();
-      redoStack = [];
-    }
-    // Bei jeder echten Änderung merken
-    editor.addEventListener('input', function() {
-      if (editor.value !== lastValue) {
-        pushUndo();
-        lastValue = editor.value;
-        lastSelection = { start: editor.selectionStart, end: editor.selectionEnd };
-      }
-    });
-    // Auch nach ENTER/TAB/SHIFT+TAB (synthetische Änderungen)
-    function pushUndoIfNeeded() {
-      if (editor.value !== lastValue) {
-        pushUndo();
-        lastValue = editor.value;
-        lastSelection = { start: editor.selectionStart, end: editor.selectionEnd };
-      }
-    }
-    editor.addEventListener('keydown', function(e) {
-      // Undo/Redo
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC')>=0;
-      const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
-      if (ctrlKey && !e.altKey && e.key.toLowerCase() === 'z') {
-        if (e.shiftKey) {
-          // Redo
-          if (redoStack.length > 0) {
-            const state = redoStack.pop();
-            undoStack.push({ value: editor.value, selectionStart: editor.selectionStart, selectionEnd: editor.selectionEnd });
-            editor.value = state.value;
-            editor.selectionStart = state.selectionStart;
-            editor.selectionEnd = state.selectionEnd;
-            lastValue = editor.value;
-            lastSelection = { start: editor.selectionStart, end: editor.selectionEnd };
-            e.preventDefault();
-            return;
-          }
-        } else {
-          // Undo
-          if (undoStack.length > 0) {
-            const state = undoStack.pop();
-            redoStack.push({ value: editor.value, selectionStart: editor.selectionStart, selectionEnd: editor.selectionEnd });
-            editor.value = state.value;
-            editor.selectionStart = state.selectionStart;
-            editor.selectionEnd = state.selectionEnd;
-            lastValue = editor.value;
-            lastSelection = { start: editor.selectionStart, end: editor.selectionEnd };
-            e.preventDefault();
-            return;
-          }
-        }
-      }
-      // ENTER: Automatischer Bulletpoint mit gleicher Einrückung
-      if (e.key === 'Enter') {
-        const val = editor.value;
-        const selStart = editor.selectionStart;
-        const before = val.slice(0, selStart);
-        const after = val.slice(editor.selectionEnd);
-        // Finde die aktuelle Zeile
-        const lines = before.split('\n');
-        const prevLine = lines[lines.length-1] || '';
-        const match = prevLine.match(/^([\t]*)(- |\* |\+ |• )?/);
-        let indent = match ? match[1] : '';
-        let bullet = match && match[2] ? match[2] : '- ';
-        // Wenn Zeile leer, dann nur Einrückung und Bullet
-        const insert = '\n' + indent + bullet;
-        editor.value = before + insert + after;
-        // Cursor nach Bullet setzen
-        const newPos = before.length + insert.length;
-        editor.selectionStart = editor.selectionEnd = newPos;
-        e.preventDefault();
-        return;
-      }
-      // Multi-Line-Indent (TAB/SHIFT+TAB)
-      if (e.key === 'Tab') {
-        const val = editor.value;
-        const selStart = editor.selectionStart;
-        const selEnd = editor.selectionEnd;
-        // Finde Zeilenanfang und -ende
-        const before = val.slice(0, selStart);
-        const after = val.slice(selEnd);
-        const lineStart = before.lastIndexOf('\n')+1;
-        const lineEnd = val.indexOf('\n', selEnd) === -1 ? val.length : val.indexOf('\n', selEnd);
-        // Multi-Line: Bereich umfasst mehrere Zeilen?
-        if (selStart !== selEnd && val.slice(selStart, selEnd).includes('\n')) {
-          // Alle betroffenen Zeilen holen
-          const selected = val.slice(lineStart, lineEnd);
-          const lines = val.slice(selStart, selEnd).split('\n');
-          if (!e.shiftKey) {
-            // TAB: Jede Zeile einrücken
-            const newLines = lines.map(line => '\t' + line);
-            const newText = newLines.join('\n');
-            editor.value = val.slice(0, selStart) + newText + val.slice(selEnd);
-            editor.selectionStart = selStart;
-            editor.selectionEnd = selStart + newText.length;
-            e.preventDefault();
-            return;
-          } else {
-            // SHIFT+TAB: Jede Zeile ausrücken (Tab am Anfang entfernen)
-            const newLines = lines.map(line => line.startsWith('\t') ? line.slice(1) : line);
-            const newText = newLines.join('\n');
-            editor.value = val.slice(0, selStart) + newText + val.slice(selEnd);
-            editor.selectionStart = selStart;
-            editor.selectionEnd = selStart + newText.length;
-            e.preventDefault();
-            return;
-          }
-        } else {
-          // Einzelzeile: wie bisher
-          const line = val.slice(lineStart, selEnd);
-          // Prüfe, ob Zeile nur aus Einrückung + Bullet besteht
-          const match = line.match(/^([\t]*)(- |\* |\+ |• )$/);
-          if (!e.shiftKey && match) {
-            // Eine Tab voranstellen
-            const newLine = '\t' + line;
-            editor.value = val.slice(0, lineStart) + newLine + val.slice(selEnd);
-            // Cursorposition anpassen
-            const delta = 1; // ein Tab
-            editor.selectionStart = editor.selectionEnd = selEnd + delta;
-            e.preventDefault();
-            return;
-          } else if (e.shiftKey) {
-            // SHIFT+TAB: Tab am Zeilenanfang entfernen
-            if (line.startsWith('\t')) {
-              const newLine = line.slice(1);
-              editor.value = val.slice(0, lineStart) + newLine + val.slice(selEnd);
-              editor.selectionStart = editor.selectionEnd = selEnd - 1;
-              e.preventDefault();
-              return;
-            }
-          }
-        }
-        // Sonst: Standardverhalten (z.B. Tab im Text)
-      }
-      // Nach synthetischer Änderung Undo-Stack pushen
-      setTimeout(pushUndoIfNeeded, 0);
-    });
-  }
 
   // --- Settings-Button & Menü ---
   const settingsToggle = document.getElementById('settings-toggle');
@@ -1546,6 +1505,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // --- New: Open help topic in new tab as rendered HTML ---
   async function openInfoTopicInNewTab(topic) {
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('Pop-up Blocker verhindert das Öffnen des Hilfethemas.');
+      return;
+    }
     let md = '';
     let error = null;
     try {
@@ -1579,14 +1543,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     </style></head><body>${html}${backLink}</body></html>`;
     // Open in new tab
-    const win = window.open();
-    if (win) {
-      win.document.open();
-      win.document.write(docHtml);
-      win.document.close();
-    } else {
-      alert('Pop-up Blocker verhindert das Öffnen des Hilfethemas.');
-    }
+    win.document.open();
+    win.document.write(docHtml);
+    win.document.close();
   }
 
   infoToggle.addEventListener('click', (e) => {
