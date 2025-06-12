@@ -779,6 +779,7 @@ body.dark-mode .info-menu-back-btn:focus-visible {
   height: 100%;
   cursor: col-resize;
   background: var(--glass-bg);
+  z-index: 2;
 }
 #editor-resizer:hover { background: var(--glass-hover-bg); }
 #editor-resizer.active { background: var(--palette-primary); }
@@ -803,6 +804,11 @@ body.dark-mode .info-menu-back-btn:focus-visible {
   background: var(--palette-primary);
   color: #fff;
 }
+}
+#editor-actions button:hover {
+  background: var(--palette-primary);
+  color: #fff;
+}
 body.dark-mode #editor-actions button {
   background: var(--glass-bg);
   color: var(--palette-accent);
@@ -810,7 +816,17 @@ body.dark-mode #editor-actions button {
 body.dark-mode #editor-actions button:hover {
   background: var(--palette-accent);
   color: #222;
-=======
+}
+
+/* Hide controls and search in fullscreen */
+body.fullscreen-ui #controls-wrapper,
+body.fullscreen-ui #search-bar {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+body.fullscreen-ui #controls-wrapper:hover,
+body.fullscreen-ui #search-bar:hover {
+  opacity: 1;
 @media (max-width: 900px) {
   body.editor-open #editor-container {
     width: 100vw;

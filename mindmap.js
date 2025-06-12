@@ -13,6 +13,7 @@ let fixedNodes = [];          // Array to track fixed nodes
 let editorInstance = null;
 let scrollSyncEnabled = true;
 let editorWidth = 50; // in vw when editor is open
+let editorSelection = null; // remembers cursor position when editor closes
 
 const colorSchemes = {
   category10: d3.schemeCategory10,
@@ -75,6 +76,7 @@ function updateEditorWidth(width) {
   document.getElementById('info-bar').style.left = width + 'vw';
   document.getElementById('info-bar').style.width = (100 - width) + 'vw';
   document.getElementById('editor-container').style.width = width + 'vw';
+  if (editorInstance) editorInstance.layout();
 }
 
 // === Exporte / Hilfsfunktionen ===
@@ -1174,6 +1176,16 @@ window.addEventListener('DOMContentLoaded', () => {
     exportBar.classList.add('is-hidden');
     exportToggle.classList.remove('toggle-btn--active');
     if (isOpen) {
+      if (editorInstance && editorInstance.getValue().trim() === '') {
+        if (currentGraph && currentGraph.nodes && currentGraph.links) {
+          editorInstance.setValue(toMd(currentGraph.nodes, currentGraph.links));
+        } else if (currentHierarchy) {
+          function toAd(node, indent = 0) {
+            let out = " ".repeat(indent) + "- " + node.name + "\n";
+            if (node.children) {
+              for (const c of node.children) out += toAd(c, indent + 4);
+            }
+            return out;
       if (currentGraph && currentGraph.nodes && currentGraph.links) {
         if (editorInstance) editorInstance.setValue(toMd(currentGraph.nodes, currentGraph.links));
       } else if (currentHierarchy) {
@@ -1182,8 +1194,14 @@ window.addEventListener('DOMContentLoaded', () => {
           if (node.children) {
             for (const c of node.children) out += toAd(c, indent + 4);
           }
-          return out;
+          editorInstance.setValue(toAd(currentHierarchy));
+        } else {
+          editorInstance.setValue('');
         }
+      }
+      document.querySelector('svg').style.position = 'fixed';
+      updateEditorWidth(editorWidth);
+      if (editorSelection && editorInstance) editorInstance.setPosition(editorSelection);
         if (editorInstance) editorInstance.setValue(toAd(currentHierarchy));
       } else {
         if (editorInstance) editorInstance.setValue('');
@@ -1195,6 +1213,7 @@ window.addEventListener('DOMContentLoaded', () => {
       document.querySelector('svg').style.height = '100vh';
       if (editorInstance) editorInstance.focus();
     } else {
+      if (editorInstance) editorSelection = editorInstance.getPosition();
       document.querySelector('svg').style.position = '';
       document.querySelector('svg').style.left = '';
       document.querySelector('svg').style.width = '';
@@ -1203,6 +1222,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   closeEditor.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (editorInstance) editorSelection = editorInstance.getPosition();
     editorContainer.classList.add('is-hidden');
     editToggle.classList.remove('toggle-btn--active');
     document.querySelector('svg').style.position = '';
@@ -1252,6 +1272,11 @@ window.addEventListener('DOMContentLoaded', () => {
     } else {
       document.exitFullscreen();
     }
+    setTimeout(centerGraphOrTree, 200);
+  });
+  document.addEventListener('fullscreenchange', () => {
+    const fs = !!document.fullscreenElement;
+    document.body.classList.toggle('fullscreen-ui', fs);
     setTimeout(centerGraphOrTree, 200);
   });
   // --- ShowAll-Button (Texte ein-/ausblenden) ---
@@ -1355,6 +1380,7 @@ window.addEventListener('DOMContentLoaded', () => {
       exportToggle.classList.remove('toggle-btn--active');
     }
     if (!editorContainer.contains(e.target) && e.target !== editToggle) {
+      if (editorInstance) editorSelection = editorInstance.getPosition();
       editorContainer.classList.add('is-hidden');
       editToggle.classList.remove('toggle-btn--active');
       document.querySelector('svg').style.position = '';
@@ -1497,6 +1523,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // --- New: Open help topic in new tab as rendered HTML ---
   async function openInfoTopicInNewTab(topic) {
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('Pop-up Blocker verhindert das Öffnen des Hilfethemas.');
+      return;
+    }
     let md = '';
     let error = null;
     try {
@@ -1530,14 +1561,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     </style></head><body>${html}${backLink}</body></html>`;
     // Open in new tab
-    const win = window.open();
-    if (win) {
-      win.document.open();
-      win.document.write(docHtml);
-      win.document.close();
-    } else {
-      alert('Pop-up Blocker verhindert das Öffnen des Hilfethemas.');
-    }
+    win.document.open();
+    win.document.write(docHtml);
+    win.document.close();
   }
 
   infoToggle.addEventListener('click', (e) => {
