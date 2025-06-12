@@ -1098,6 +1098,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   setupEditor();
 
+  setupEditor();
+
   // --- Export-Button ---
   exportToggle.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1188,6 +1190,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       document.querySelector('svg').style.position = 'fixed';
       updateEditorWidth(editorWidth);
+      document.querySelector('svg').style.left = '50vw';
+      document.querySelector('svg').style.width = '50vw';
+      document.querySelector('svg').style.height = '100vh';
       if (editorInstance) editorInstance.focus();
     } else {
       document.querySelector('svg').style.position = '';
