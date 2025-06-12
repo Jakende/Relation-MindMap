@@ -15,9 +15,13 @@ style.css – Erstellt am 2025-05-20
   --palette-dark-text: #f1f1f1;
   --palette-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
   /* Liquid Glass variables */
-  --glass-bg: rgba(255, 255, 255, 0.3);
-  --glass-blur: 20px;
+  --app-bg: linear-gradient(135deg, #f0f4ff 0%, #fafbff 100%);
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-hover-bg: rgba(255, 255, 255, 0.8);
+  --glass-blur: 30px;
   --glass-border: 1px solid rgba(255, 255, 255, 0.4);
+  --glass-radius: 16px;
+  --glass-shadow: 0 6px 20px rgba(0,0,0,0.1);
 }
 
 html, body {
@@ -26,7 +30,7 @@ html, body {
 }
 
 body, html {
-  background: var(--palette-bg);
+  background: var(--app-bg);
   color: var(--palette-text);
   font-family: 'Roboto', Arial, sans-serif;
   font-size: 16px;
@@ -34,10 +38,12 @@ body, html {
   padding: 0;
 }
 body.dark-mode, html.dark-mode {
-  background: var(--palette-dark-bg);
+  background: var(--app-bg);
   color: var(--palette-dark-text);
-  --glass-bg: rgba(34, 36, 37, 0.3);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --app-bg: linear-gradient(135deg, #1c1e20 0%, #23262a 100%);
+  --glass-bg: rgba(34, 36, 37, 0.55);
+  --glass-hover-bg: rgba(34, 36, 37, 0.8);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 /* --- Liquid Glass surfaces --- */
@@ -46,8 +52,13 @@ body.dark-mode, html.dark-mode {
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: var(--glass-border);
-  transition: background 0.3s, border 0.3s;
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
+  transition: background 0.3s, border 0.3s, box-shadow 0.3s, transform 0.2s;
   color: inherit;
+}
+.glass-surface:hover {
+  background: var(--glass-hover-bg);
 }
 
 /* --- Toggle Buttons --- */
@@ -56,21 +67,26 @@ body.dark-mode, html.dark-mode {
   right: 24px;
   width: 44px;
   height: 44px;
-  border: none;
   border-radius: 50%;
-  background: var(--toolbar-btn-bg, #f0f0f0);
-  color: var(--toolbar-btn-fg, #222);
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  color: var(--palette-text);
   font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-  backdrop-filter: blur(8px);
-  transition: background 0.3s, color 0.3s;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  transition: background 0.3s, border 0.3s, transform 0.2s;
   z-index: 20;
   padding: 0;
   margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.toggle-btn:hover {
+  transform: scale(1.05);
+  background: var(--glass-hover-bg);
 }
 .toggle-btn--active {
   background: var(--accent, #4a90e2);
@@ -84,11 +100,11 @@ body.dark-mode, html.dark-mode {
   left: 24px;
   right: auto;
   bottom: 64px;
-  background: #eaf6ff;
-  color: #0074d9;
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  color: var(--palette-primary);
   font-size: 20px;
-  border: 1.5px solid #b3d8f7;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: var(--glass-shadow);
 }
 
 /* --- Toggle Buttons (vertical stack, right side) --- */
@@ -221,25 +237,25 @@ body.dark-mode .node text {
 /* --- Info Bar, Editor, Palette, Export, Search --- */
 #info-bar {
   position: fixed; left: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.97);
-  border-top: 1px solid #ccc;
+  background: var(--glass-bg);
+  border-top: var(--glass-border);
   font-size: 17px;
   padding: 12px 24px;
   min-height: 36px;
   z-index: 10;
   pointer-events: none;
   white-space: pre-line;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(var(--glass-blur));
   display: flex;
   align-items: flex-start;
-  color: #1a1a1a;
+  color: var(--palette-text);
   transition: background 0.5s, color 0.5s;
-  border-radius: 10px;
+  border-radius: var(--glass-radius);
 }
 body.dark-mode #info-bar {
-  background: rgba(24,26,27,0.97);
-  color: #f1f1f1;
-  border-top: 1px solid #333;
+  background: var(--glass-bg);
+  color: var(--palette-dark-text);
+  border-top: var(--glass-border);
 }
 #editor-container {
   position: fixed;
@@ -248,10 +264,11 @@ body.dark-mode #info-bar {
   width: 50vw;
   height: 100vh;
   z-index: 100;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+  box-shadow: var(--glass-shadow);
+  border-right: var(--glass-border);
 }
 body.dark-mode #editor-container {
-  border-right: 2px solid #444;
+  border-right: var(--glass-border);
 }
 #editor-container textarea {
   width: 100%;
@@ -269,30 +286,30 @@ body.dark-mode #editor-container {
   top: 10px;
   right: 10px;
   z-index: 101;
-  background: #fff;
-  color: #0074d9;
-  border: 1px solid #bbb;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  color: var(--palette-primary);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
   padding: 8px 16px;
   font-size: 16px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: var(--glass-shadow);
   transition: background 0.3s, color 0.3s;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--glass-blur));
 }
 #close-editor:hover {
   background: #0074d9;
   color: #fff;
-  border: 1.5px solid #0074d9;
+  border: var(--glass-border);
 }
 body.dark-mode #markdown-editor {
-  background: #23272b;
-  color: #f1f1f1;
-  caret-color: #4fc3f7;
+  background: var(--glass-bg);
+  color: var(--palette-dark-text);
+  caret-color: var(--palette-accent);
 }
 body.dark-mode #markdown-editor:focus {
-  background: #181a1b;
-  border: 1.5px solid #4fc3f7;
+  background: var(--glass-hover-bg);
+  border: var(--glass-border);
   outline: 2px solid #0074d9;
 }
 #palette-menu, .export-bar {
@@ -304,8 +321,8 @@ body.dark-mode #markdown-editor:focus {
   flex-direction: column;
   gap: 10px;
   padding: 16px 18px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
   z-index: 1000;
 }
 @media (max-width: 700px) {
@@ -330,10 +347,11 @@ body.dark-mode .export-bar {
 }
 .palette-btn, .export-btn {
   padding: 10px 20px;
-  border: 1px solid #bbb;
-  border-radius: 8px;
-  background: #f7f7fa;
-  color: #0074d9;
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  color: var(--palette-primary);
   font-weight: 500;
   text-align: left;
   cursor: pointer;
@@ -342,18 +360,18 @@ body.dark-mode .export-bar {
 .palette-btn:hover, .export-btn:hover {
   background: var(--palette-primary);
   color: #fff;
-  border: 1.5px solid var(--palette-primary);
+  border: var(--glass-border);
   outline: 2px solid var(--palette-primary);
 }
 body.dark-mode .palette-btn, body.dark-mode .export-btn {
-  background: #23272b;
-  color: #f1f1f1;
-  border: 1.5px solid #444;
+  background: var(--glass-bg);
+  color: var(--palette-dark-text);
+  border: var(--glass-border);
 }
 body.dark-mode .palette-btn:hover, body.dark-mode .export-btn:hover {
-  background: #181a1b;
-  color: #4fc3f7;
-  border: 1.5px solid #4fc3f7;
+  background: var(--palette-accent);
+  color: #222;
+  border: var(--glass-border);
 }
 #search-bar {
   position: fixed; left: 0; top: 0;
@@ -362,8 +380,8 @@ body.dark-mode .palette-btn:hover, body.dark-mode .export-btn:hover {
   flex-direction: column;
   gap: 8px;
   width: 480px; max-width: 98vw;
-  box-shadow: 0 0 16px rgba(0,0,0,0.08);
-  border-radius: 10px;
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
 }
 body.dark-mode #search-bar {
   color: #f1f1f1;
@@ -374,28 +392,28 @@ body.dark-mode #search-bar {
 #search-bar input {
   width: 70%; max-width: 320px;
   padding: 12px 16px;
-  border: 1px solid #bbb;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.8);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
+  background: var(--glass-bg);
   outline: none;
 }
 #search-bar input:focus {
-  border: 1.5px solid var(--palette-primary);
-  background: #fff;
+  border: var(--glass-border);
+  background: var(--glass-hover-bg);
 }
 body.dark-mode #search-bar input {
-  background: rgba(34,36,37,0.95);
-  border: 1px solid #444;
+  background: var(--glass-bg);
+  border: var(--glass-border);
 }
 body.dark-mode #search-bar input:focus {
-  border: 1.5px solid var(--palette-accent);
-  background: rgba(34,36,37,1);
+  border: var(--glass-border);
+  background: var(--glass-hover-bg);
 }
 #search-bar button {
   padding: 12px 22px;
-  border: none;
-  border-radius: 8px;
-  background: rgba(0,116,217,0.12);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
+  background: var(--glass-bg);
   color: var(--palette-primary);
   font-weight: 500;
   cursor: pointer;
@@ -417,10 +435,10 @@ body.dark-mode #search-bar button:hover, body.dark-mode #search-bar button:focus
 #search-results {
   max-width: 440px;
   margin-top: 0;
-  background: rgba(255,255,255,0.92);
-  border: 1px solid #eee;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
   padding: 6px 10px;
   max-height: 180px;
   overflow-y: auto;
@@ -428,8 +446,8 @@ body.dark-mode #search-bar button:hover, body.dark-mode #search-bar button:focus
   font-size: 15px;
 }
 body.dark-mode #search-results {
-  background: rgba(34,36,37,0.97);
-  border: 1px solid #333;
+  background: var(--glass-bg);
+  border: var(--glass-border);
   color: #f1f1f1;
 }
 .search-result { padding: 8px 0; cursor: pointer; }
@@ -448,16 +466,16 @@ body.dark-mode .search-highlight {
 #markdown-editor {
   font-family: 'Fira Mono', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
   font-size: 14px;
-  background: #f9f9fb;
-  color: #23272b;
-  caret-color: #0074d9;
+  background: var(--glass-bg);
+  color: var(--palette-text);
+  caret-color: var(--palette-primary);
   border: none;
   outline: none;
   padding: 18px 24px;
   line-height: 1.6;
   resize: none;
   box-sizing: border-box;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--glass-radius) var(--glass-radius);
   min-height: 100%;
   width: 100%;
   transition: background 0.3s, color 0.3s;
@@ -478,8 +496,8 @@ body.dark-mode .search-highlight {
   right: 80px;
   min-width: 320px;
   max-width: 95vw;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
   z-index: 1001;
   display: flex;
   flex-direction: column;
@@ -512,30 +530,30 @@ body.dark-mode #settings-menu {
   margin-top: 10px;
   align-self: flex-end;
   padding: 8px 18px;
-  border-radius: 8px;
-  border: 1px solid #bbb;
-  background: #f7f7fa;
-  color: #0074d9;
+  border-radius: var(--glass-radius);
+  border: var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--palette-primary);
   font-weight: 500;
   cursor: pointer;
   font-size: 1em;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: var(--glass-shadow);
   transition: background 0.3s, color 0.3s;
 }
 .settings-close-btn:hover {
   background: var(--palette-primary);
   color: #fff;
-  border: 1.5px solid var(--palette-primary);
+  border: var(--glass-border);
 }
 body.dark-mode .settings-close-btn {
-  background: #23272b;
-  color: #4fc3f7;
-  border: 1px solid #444;
+  background: var(--glass-bg);
+  color: var(--palette-accent);
+  border: var(--glass-border);
 }
 body.dark-mode .settings-close-btn:hover {
-  background: #4fc3f7;
+  background: var(--palette-accent);
   color: #222;
-  border: 1.5px solid #4fc3f7;
+  border: var(--glass-border);
 }
 @media (max-width: 700px) {
   #settings-menu {
@@ -558,8 +576,8 @@ body.dark-mode .settings-close-btn:hover {
   min-width: 320px;
   max-width: 95vw;
   max-height: 80vh;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
   z-index: 2000;
   display: flex;
   flex-direction: column;
@@ -600,10 +618,10 @@ body.dark-mode #info-menu {
   gap: 10px;
 }
 .info-menu-topic-btn {
-  background: #f7f7fa;
-  color: #0074d9;
-  border: 1px solid #bbb;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  color: var(--palette-primary);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
   padding: 10px 16px;
   font-size: 1em;
   text-align: left;
@@ -615,12 +633,12 @@ body.dark-mode #info-menu {
   color: #fff;
 }
 body.dark-mode .info-menu-topic-btn {
-  background: #23272b;
-  color: #4fc3f7;
-  border: 1px solid #444;
+  background: var(--glass-bg);
+  color: var(--palette-accent);
+  border: var(--glass-border);
 }
 body.dark-mode .info-menu-topic-btn:hover {
-  background: #4fc3f7;
+  background: var(--palette-accent);
   color: #222;
 }
 #info-menu-md-content {
@@ -632,10 +650,10 @@ body.dark-mode .info-menu-topic-btn:hover {
 }
 .info-menu-back-btn {
   margin-top: 18px;
-  background: #f7f7fa;
-  color: #0074d9;
-  border: 1px solid #bbb;
-  border-radius: 8px;
+  background: var(--glass-bg);
+  color: var(--palette-primary);
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
   padding: 8px 16px;
   font-size: 1em;
   cursor: pointer;
@@ -645,32 +663,32 @@ body.dark-mode .info-menu-topic-btn:hover {
   color: #fff;
 }
 body.dark-mode .info-menu-back-btn {
-  background: #23272b;
-  color: #4fc3f7;
-  border: 1px solid #444;
+  background: var(--glass-bg);
+  color: var(--palette-accent);
+  border: var(--glass-border);
 }
 body.dark-mode .info-menu-back-btn:hover {
-  background: #4fc3f7;
+  background: var(--palette-accent);
   color: #222;
 }
 
 /* Dark Mode Styles for Buttons */
 body.dark-mode .toggle-btn {
-  background: #23272b;
-  color: #f1f1f1;
-  border: 1.5px solid #444;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  color: var(--palette-dark-text);
+  box-shadow: var(--glass-shadow);
 }
 body.dark-mode .toggle-btn:hover,
 body.dark-mode .toggle-btn:focus {
-  background: #181a1b;
-  color: #4fc3f7;
-  border: 1.5px solid #4fc3f7;
+  background: var(--glass-hover-bg);
+  color: var(--palette-accent);
+  border: var(--glass-border);
 }
 body.dark-mode .toggle-btn--active {
-  background: #0074d9;
+  background: var(--palette-primary);
   color: #fff;
-  border: 1.5px solid #4fc3f7;
+  border: var(--glass-border);
 }
 body.dark-mode .palette-btn,
 body.dark-mode .export-btn {
@@ -703,15 +721,15 @@ body.dark-mode .info-menu-back-btn:hover {
 body.dark-mode .toggle-btn.toggle-btn--active,
 body.dark-mode .toggle-btn--active,
 body.dark-mode button.toggle-btn--active {
-  background: #0074d9 !important;
+  background: var(--palette-primary) !important;
   color: #fff !important;
-  border: 1.5px solid #4fc3f7 !important;
-  box-shadow: 0 0 0 2px #0074d9cc !important;
+  border: var(--glass-border) !important;
+  box-shadow: 0 0 0 2px var(--palette-primary)cc !important;
 }
 body.dark-mode .toggle-btn.toggle-btn--info.toggle-btn--active {
-  background: #0074d9 !important;
+  background: var(--palette-primary) !important;
   color: #fff !important;
-  border: 1.5px solid #4fc3f7 !important;
+  border: var(--glass-border) !important;
 }
 
 /* --- Entferne blaue Outline bei allen Buttons und klickbaren Elementen --- */
