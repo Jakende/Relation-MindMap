@@ -12,6 +12,7 @@ let fixedNodes = [];          // Array to track fixed nodes
 
 let editorInstance = null;
 let scrollSyncEnabled = true;
+let editorWidth = 50; // in vw when editor is open
 
 const colorSchemes = {
   category10: d3.schemeCategory10,
@@ -64,6 +65,16 @@ function loadLastContent() {
 
 function saveLastContent(content) {
   localStorage.setItem('mindmapMarkdown', content);
+}
+
+function updateEditorWidth(width) {
+  const svg = document.querySelector('svg');
+  svg.style.left = width + 'vw';
+  svg.style.width = (100 - width) + 'vw';
+  svg.style.height = '100vh';
+  document.getElementById('info-bar').style.left = width + 'vw';
+  document.getElementById('info-bar').style.width = (100 - width) + 'vw';
+  document.getElementById('editor-container').style.width = width + 'vw';
 }
 
 // === Exporte / Hilfsfunktionen ===
@@ -832,7 +843,7 @@ function centerGraphOrTree(retry = 0) {
   const g = svg.select('g');
   if (!g.empty()) {
     const bbox = g.node().getBBox();
-    const isEditorOpen = document.body.classList.contains('editor-open');
+    const isEditorOpen = !document.getElementById('editor-container').classList.contains('is-hidden');
     const width = window.innerWidth;
     const height = window.innerHeight;
     if ((bbox.width < 10 || bbox.height < 10) && retry < 10) {
@@ -843,18 +854,14 @@ function centerGraphOrTree(retry = 0) {
     let graphCenterX = bbox.width > 0 ? bbox.x + bbox.width / 2 : 0;
     let graphCenterY = bbox.height > 0 ? bbox.y + bbox.height / 2 : 0;
     if (isEditorOpen) {
-      // Begrenzung: Graph muss komplett in rechter Hälfte (50vw bis 100vw) sichtbar sein
-      const rightHalfStart = width / 2;
-      const rightHalfEnd = width;
-      // Ziel: Graph möglichst mittig in rechter Hälfte, aber nicht hinausragen
-      let offsetX = rightHalfStart + (rightHalfEnd - rightHalfStart) / 2 - graphCenterX;
-      // Linksbegrenzung: bbox.x >= rightHalfStart
-      if (bbox.x + offsetX < rightHalfStart) {
-        offsetX = rightHalfStart - bbox.x;
+      const start = width * (editorWidth / 100);
+      const end = width;
+      let offsetX = start + (end - start) / 2 - graphCenterX;
+      if (bbox.x + offsetX < start) {
+        offsetX = start - bbox.x;
       }
-      // Rechtsbegrenzung: bbox.x + bbox.width <= rightHalfEnd
-      if (bbox.x + bbox.width + offsetX > rightHalfEnd) {
-        offsetX = rightHalfEnd - (bbox.x + bbox.width);
+      if (bbox.x + bbox.width + offsetX > end) {
+        offsetX = end - (bbox.x + bbox.width);
       }
       svg.transition().duration(0)
         .call(
@@ -1031,6 +1038,22 @@ function setupEditor() {
       document.getElementById('editor-copy').addEventListener('click', () => {
         navigator.clipboard.writeText(editorInstance.getValue());
       });
+
+      const toggleViewBtn = document.getElementById('toggle-view');
+      const editorDiv = document.getElementById('editor');
+      const previewDiv = document.getElementById('preview');
+      toggleViewBtn.addEventListener('click', () => {
+        const showingEditor = !editorDiv.classList.contains('is-hidden');
+        if (showingEditor) {
+          editorDiv.classList.add('is-hidden');
+          previewDiv.classList.remove('is-hidden');
+          toggleViewBtn.textContent = 'Edit';
+        } else {
+          previewDiv.classList.add('is-hidden');
+          editorDiv.classList.remove('is-hidden');
+          toggleViewBtn.textContent = 'Preview';
+        }
+      });
       resolve();
     });
   });
@@ -1054,6 +1077,26 @@ window.addEventListener('DOMContentLoaded', () => {
   const importFile = document.getElementById('import-file');
   const clearToggle = document.getElementById('clear-toggle');
   const stickyNodesToggle = document.getElementById('sticky-nodes-toggle');
+  const resizeHandle = document.getElementById('editor-resizer');
+  let isResizing = false;
+
+  resizeHandle.addEventListener('mousedown', e => {
+    isResizing = true;
+    resizeHandle.classList.add('active');
+  });
+  document.addEventListener('mousemove', e => {
+    if (!isResizing) return;
+    editorWidth = Math.min(80, Math.max(20, e.clientX / window.innerWidth * 100));
+    updateEditorWidth(editorWidth);
+  });
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      resizeHandle.classList.remove('active');
+    }
+  });
+
+  setupEditor();
 
   setupEditor();
 
@@ -1146,6 +1189,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (editorInstance) editorInstance.setValue('');
       }
       document.querySelector('svg').style.position = 'fixed';
+      updateEditorWidth(editorWidth);
       document.querySelector('svg').style.left = '50vw';
       document.querySelector('svg').style.width = '50vw';
       document.querySelector('svg').style.height = '100vh';
@@ -1165,6 +1209,12 @@ window.addEventListener('DOMContentLoaded', () => {
     document.querySelector('svg').style.left = '';
     document.querySelector('svg').style.width = '';
     document.querySelector('svg').style.height = '';
+    document.getElementById('info-bar').style.left = '';
+    document.getElementById('info-bar').style.width = '';
+    document.getElementById('editor-container').style.width = '';
+    document.getElementById('editor').classList.remove('is-hidden');
+    document.getElementById('preview').classList.add('is-hidden');
+    document.getElementById('toggle-view').textContent = 'Preview';
   });
   // --- Clear-Button ---
   clearToggle.addEventListener('click', (e) => {

@@ -1,11 +1,13 @@
 # Live-Markdown-Editor – Bedienung und Funktionen
 
-Der integrierte Markdown-Editor basiert nun auf **Monaco** und zeigt parallel eine HTML-Vorschau an. Änderungen werden weiterhin sofort in die Visualisierung übernommen und zusätzlich lokal gespeichert.
+Der integrierte Markdown-Editor basiert auf **Monaco** und bietet eine umschaltbare HTML-Vorschau. Änderungen werden sofort in die Visualisierung übernommen und zusätzlich lokal gespeichert.
 
 ## Funktionen
 
 - **Reset & Copy:** Der Editor besitzt eigene Schaltflächen zum Zurücksetzen des Inhalts und Kopieren in die Zwischenablage.
 - **Sync Scroll:** Auf Wunsch wird der Scrollbalken zwischen Editor und Vorschau synchronisiert.
+- **Ansicht wechseln:** Über einen Button lässt sich zwischen Editor und Vorschau hin‑ und herschalten.
+- **Größe anpassen:** Die Breite des Editors kann per Drag am rechten Rand verändert werden.
 - **Auto-Speichern:** Der zuletzt bearbeitete Text bleibt über Seitenreloads erhalten.
 - **Monaco Features:** Syntax‑Highlighting, Undo/Redo und Tabulator‑Unterstützung übernimmt die eingebaute Monaco-Funktionalität.
 - **Dark/Light-Mode:** Editor passt sich dem gewählten Farbschema an.

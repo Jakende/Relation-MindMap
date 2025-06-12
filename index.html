@@ -71,6 +71,9 @@ Refactoring 2025-05-20:
 
   <!-- Editor -->
   <div id="editor-container" class="glass-surface is-hidden">
+    <div id="editor" class="editor-view"></div>
+    <div id="preview" class="preview-view is-hidden">
+      <div id="output" class="markdown-body"></div>
     <div class="split-container">
       <div id="editor" class="editor-pane"></div>
       <div id="split-divider"></div>
@@ -82,6 +85,9 @@ Refactoring 2025-05-20:
       <button id="editor-reset">Reset</button>
       <button id="editor-copy">Copy</button>
       <label><input type="checkbox" id="scroll-sync" checked> Sync scroll</label>
+      <button id="toggle-view">Preview</button>
+    </div>
+    <div id="editor-resizer"></div>
     </div>
     <button id="close-editor">Schließen</button>
   </div>
