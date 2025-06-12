@@ -1100,6 +1100,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   setupEditor();
 
+  setupEditor();
+
   // --- Export-Button ---
   exportToggle.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1184,6 +1186,13 @@ window.addEventListener('DOMContentLoaded', () => {
               for (const c of node.children) out += toAd(c, indent + 4);
             }
             return out;
+      if (currentGraph && currentGraph.nodes && currentGraph.links) {
+        if (editorInstance) editorInstance.setValue(toMd(currentGraph.nodes, currentGraph.links));
+      } else if (currentHierarchy) {
+        function toAd(node, indent = 0) {
+          let out = " ".repeat(indent) + "- " + node.name + "\n";
+          if (node.children) {
+            for (const c of node.children) out += toAd(c, indent + 4);
           }
           editorInstance.setValue(toAd(currentHierarchy));
         } else {
@@ -1193,6 +1202,15 @@ window.addEventListener('DOMContentLoaded', () => {
       document.querySelector('svg').style.position = 'fixed';
       updateEditorWidth(editorWidth);
       if (editorSelection && editorInstance) editorInstance.setPosition(editorSelection);
+        if (editorInstance) editorInstance.setValue(toAd(currentHierarchy));
+      } else {
+        if (editorInstance) editorInstance.setValue('');
+      }
+      document.querySelector('svg').style.position = 'fixed';
+      updateEditorWidth(editorWidth);
+      document.querySelector('svg').style.left = '50vw';
+      document.querySelector('svg').style.width = '50vw';
+      document.querySelector('svg').style.height = '100vh';
       if (editorInstance) editorInstance.focus();
     } else {
       if (editorInstance) editorSelection = editorInstance.getPosition();

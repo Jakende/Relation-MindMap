@@ -804,6 +804,11 @@ body.dark-mode .info-menu-back-btn:focus-visible {
   background: var(--palette-primary);
   color: #fff;
 }
+}
+#editor-actions button:hover {
+  background: var(--palette-primary);
+  color: #fff;
+}
 body.dark-mode #editor-actions button {
   background: var(--glass-bg);
   color: var(--palette-accent);
@@ -822,4 +827,80 @@ body.fullscreen-ui #search-bar {
 body.fullscreen-ui #controls-wrapper:hover,
 body.fullscreen-ui #search-bar:hover {
   opacity: 1;
+@media (max-width: 900px) {
+  body.editor-open #editor-container {
+    width: 100vw;
+    height: 50vh;
+    top: 0;
+    left: 0;
+  }
+  body.editor-open svg {
+    width: 100vw !important;
+    height: 50vh !important;
+    top: 50vh;
+    left: 0;
+  }
+body.editor-open #info-bar {
+    left: 0;
+    width: 100vw;
+    bottom: 0;
+  }
+}
+
+/* --- Split Editor Layout --- */
+.split-container {
+  display: flex;
+  width: 100%;
+  height: calc(100% - 40px);
+}
+
+.editor-pane,
+.preview-pane {
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.preview-pane {
+  overflow-y: auto;
+}
+
+#editor { height: 100%; }
+#preview .markdown-body { padding: 12px 16px; }
+
+.split-divider {
+  width: 4px;
+  background: var(--glass-bg);
+  cursor: col-resize;
+}
+.split-divider:hover { background: var(--glass-hover-bg); }
+.split-divider.active { background: var(--palette-primary); }
+
+#editor-actions {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  align-items: center;
+}
+#editor-actions button {
+  padding: 6px 12px;
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
+  background: var(--glass-bg);
+  color: var(--palette-primary);
+  cursor: pointer;
+  box-shadow: var(--glass-shadow);
+  font-size: 14px;
+}
+#editor-actions button:hover {
+  background: var(--palette-primary);
+  color: #fff;
+}
+body.dark-mode #editor-actions button {
+  background: var(--glass-bg);
+  color: var(--palette-accent);
+}
+body.dark-mode #editor-actions button:hover {
+  background: var(--palette-accent);
+  color: #222;
 }
