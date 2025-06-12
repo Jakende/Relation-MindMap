@@ -18,27 +18,29 @@ Refactoring 2025-05-20:
   </style>
 </head>
 <body>
-  <!-- Header: Top right group -->
-  <button id="export-toggle" class="toggle-btn" title="Exportoptionen anzeigen" aria-label="Exportoptionen anzeigen">⬇️</button>
-  <button id="import-toggle" class="toggle-btn" title="Datei importieren" aria-label="Datei importieren">📁</button>
-  <button id="edit-toggle" class="toggle-btn" title="Markdown Editor anzeigen" aria-label="Markdown Editor anzeigen">✏️</button>
-  <button id="clear-toggle" class="toggle-btn" title="Mindmap leeren" aria-label="Mindmap leeren">🗑️</button>
-  <button id="graphmode-toggle" class="toggle-btn" title="Graph/Tree Layout umschalten" aria-label="Graph/Tree Layout umschalten">🔄</button>
-  <button id="sticky-nodes-toggle" class="toggle-btn" title="Knoten-Fixierung an/aus">🔒</button> <!-- NEU -->
-  <button id="relations-toggle" class="toggle-btn" title="Relationen anzeigen/ausblenden" aria-label="Relationen anzeigen/ausblenden"><span class="icon">🔗</span></button>
+  <div id="controls-wrapper">
+    <!-- Header: Top right group -->
+    <button id="export-toggle" class="toggle-btn" title="Exportoptionen anzeigen" aria-label="Exportoptionen anzeigen">⬇️</button>
+    <button id="import-toggle" class="toggle-btn" title="Datei importieren" aria-label="Datei importieren">📁</button>
+    <button id="edit-toggle" class="toggle-btn" title="Markdown Editor anzeigen" aria-label="Markdown Editor anzeigen">✏️</button>
+    <button id="clear-toggle" class="toggle-btn" title="Mindmap leeren" aria-label="Mindmap leeren">🗑️</button>
+    <button id="graphmode-toggle" class="toggle-btn" title="Graph/Tree Layout umschalten" aria-label="Graph/Tree Layout umschalten">🔄</button>
+    <button id="sticky-nodes-toggle" class="toggle-btn" title="Knoten-Fixierung an/aus">🔒</button> <!-- NEU -->
+    <button id="relations-toggle" class="toggle-btn" title="Relationen anzeigen/ausblenden" aria-label="Relationen anzeigen/ausblenden"><span class="icon">🔗</span></button>
 
-  <!-- Footer: Bottom right group -->
-  <button id="fullscreen-toggle" class="toggle-btn" title="Vollbildmodus umschalten" aria-label="Vollbildmodus umschalten">⛶</button>
-  <button id="showall-toggle" class="toggle-btn" title="Alle Texte anzeigen/ausblenden" aria-label="Alle Texte anzeigen/ausblenden">🅰️</button>
-  <button id="palette-toggle" class="toggle-btn toggle-btn--palette" title="Farbschema auswählen" aria-label="Farbschema auswählen">🎨</button>
-  <button id="settings-toggle" class="toggle-btn" title="Darstellung & Animation einstellen" aria-label="Darstellung & Animation einstellen">⚙️</button>
-  <button id="darkmode-toggle" class="toggle-btn toggle-btn--darkmode" title="Dark Mode umschalten" aria-label="Dark Mode umschalten">🌙</button>
+    <!-- Footer: Bottom right group -->
+    <button id="fullscreen-toggle" class="toggle-btn" title="Vollbildmodus umschalten" aria-label="Vollbildmodus umschalten">⛶</button>
+    <button id="showall-toggle" class="toggle-btn" title="Alle Texte anzeigen/ausblenden" aria-label="Alle Texte anzeigen/ausblenden">🅰️</button>
+    <button id="palette-toggle" class="toggle-btn toggle-btn--palette" title="Farbschema auswählen" aria-label="Farbschema auswählen">🎨</button>
+    <button id="settings-toggle" class="toggle-btn" title="Darstellung & Animation einstellen" aria-label="Darstellung & Animation einstellen">⚙️</button>
+    <button id="darkmode-toggle" class="toggle-btn toggle-btn--darkmode" title="Dark Mode umschalten" aria-label="Dark Mode umschalten">🌙</button>
+  </div>
   <!-- Relations-Toggle wird per JS als .toggle-btn.toggle-btn--relations eingefügt -->
 
   <input type="file" id="import-file" accept=".md,.json" class="is-hidden" />
 
   <!-- Palette-Menu und Export-Bar -->
-  <div id="palette-menu" role="menu" aria-label="Farbschema wählen" class="is-hidden">
+  <div id="palette-menu" role="menu" aria-label="Farbschema wählen" class="glass-surface is-hidden">
     <div class="palette-title">Farbschema wählen</div>
     <button class="palette-btn" data-scheme="category10">Klassisch (Standard)</button>
     <button class="palette-btn" data-scheme="accent">Frisch & Akzentuiert</button>
@@ -48,13 +50,13 @@ Refactoring 2025-05-20:
     <button class="palette-btn" data-scheme="bw">Schwarz & Weiß</button>
     <button class="palette-btn" data-scheme="cb-friendly">Farbenblind-freundlich</button>
   </div>
-  <div class="export-bar is-hidden" id="export-bar">
+  <div class="export-bar glass-surface is-hidden" id="export-bar">
     <button class="export-btn" id="export-json">Export JSON</button>
     <button class="export-btn" id="export-md">Export .md</button>
   </div>
 
   <!-- Suche -->
-  <div id="search-bar" role="search" aria-label="Suche Stakeholder">
+  <div id="search-bar" role="search" aria-label="Suche Stakeholder" class="glass-surface">
     <input id="search-input" type="text" placeholder="Suche oder Frage stellen..." autocomplete="off">
     <div>
       <button id="search-btn">Suchen</button>
@@ -64,13 +66,13 @@ Refactoring 2025-05-20:
   </div>
 
   <!-- Editor -->
-  <div id="editor-container" class="is-hidden">
+  <div id="editor-container" class="glass-surface is-hidden">
     <textarea id="markdown-editor"></textarea>
     <button id="close-editor">Schließen</button>
   </div>
 
   <!-- Pop-up Menü für Darstellungs-/Animations-Settings -->
-  <div id="settings-menu" class="is-hidden" role="dialog" aria-label="Darstellungs- und Animationsoptionen">
+  <div id="settings-menu" class="glass-surface is-hidden" role="dialog" aria-label="Darstellungs- und Animationsoptionen">
     <div class="settings-title">Darstellung & Animation</div>
     <div class="settings-slider-group">
       <label for="slider-linkdistance">Abstand der Punkte (Links): <span id="val-linkdistance">120</span> px</label>
@@ -100,7 +102,7 @@ Refactoring 2025-05-20:
   </div>
 
   <!-- Info-/Hilfe-Pop-up Menü -->
-  <div id="info-menu" class="is-hidden" role="dialog" aria-label="Hilfe und Informationen">
+  <div id="info-menu" class="glass-surface is-hidden" role="dialog" aria-label="Hilfe und Informationen">
     <div class="info-menu-content">
       <div class="info-menu-header">
         <span id="info-menu-title">Hilfe & Informationen</span>

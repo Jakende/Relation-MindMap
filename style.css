@@ -14,6 +14,10 @@ style.css – Erstellt am 2025-05-20
   --palette-text: #222;
   --palette-dark-text: #f1f1f1;
   --palette-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+  /* Liquid Glass variables */
+  --glass-bg: rgba(255, 255, 255, 0.3);
+  --glass-blur: 20px;
+  --glass-border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 html, body {
@@ -32,6 +36,18 @@ body, html {
 body.dark-mode, html.dark-mode {
   background: var(--palette-dark-bg);
   color: var(--palette-dark-text);
+  --glass-bg: rgba(34, 36, 37, 0.3);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- Liquid Glass surfaces --- */
+.glass-surface {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--glass-border);
+  transition: background 0.3s, border 0.3s;
+  color: inherit;
 }
 
 /* --- Toggle Buttons --- */
@@ -87,6 +103,27 @@ body.dark-mode, html.dark-mode {
 #palette-toggle { bottom: 64px; }
 #darkmode-toggle { bottom: 250px; }
 #fullscreen-toggle { bottom: 202px; }
+
+/* Wrapper for responsive placement */
+#controls-wrapper { position: relative; }
+
+@media (max-width: 600px) {
+  #controls-wrapper {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 10px;
+  }
+  #controls-wrapper .toggle-btn {
+    position: static;
+    margin: 0;
+  }
+}
 
 /* Ensure all toggle buttons are visually consistent */
 #relations-toggle {
@@ -210,13 +247,10 @@ body.dark-mode #info-bar {
   left: 0;
   width: 50vw;
   height: 100vh;
-  background: #fff;
   z-index: 100;
   box-shadow: 2px 0 8px rgba(0,0,0,0.08);
-  backdrop-filter: blur(8px);
 }
 body.dark-mode #editor-container {
-  background: #23272b;
   border-right: 2px solid #444;
 }
 #editor-container textarea {
@@ -267,10 +301,9 @@ body.dark-mode #markdown-editor:focus {
   right: 80px;
   /* Abstand zu Buttons, damit sie nicht überdeckt werden */
   display: none;
-  flex-direction: column; gap: 10px;
+  flex-direction: column;
+  gap: 10px;
   padding: 16px 18px;
-  background: rgba(255,255,255,0.98);
-  border: 1px solid #eee;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   z-index: 1000;
@@ -293,8 +326,6 @@ body.dark-mode #markdown-editor:focus {
 }
 body.dark-mode #palette-menu,
 body.dark-mode .export-bar {
-  background: rgba(34,36,37,0.97);
-  border: 1px solid #333;
   color: #f1f1f1;
 }
 .palette-btn, .export-btn {
@@ -326,19 +357,15 @@ body.dark-mode .palette-btn:hover, body.dark-mode .export-btn:hover {
 }
 #search-bar {
   position: fixed; left: 0; top: 0;
-  background: rgba(255,255,255,0.7);
-  border-bottom: 1px solid #ccc;
   padding: 12px 24px 14px;
-  display: flex; flex-direction: column;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   width: 480px; max-width: 98vw;
   box-shadow: 0 0 16px rgba(0,0,0,0.08);
-  backdrop-filter: blur(8px);
   border-radius: 10px;
 }
 body.dark-mode #search-bar {
-  background: rgba(24,26,27,0.85);
-  border-bottom: 1px solid #333;
   color: #f1f1f1;
 }
 #search-bar input, #search-bar button {
@@ -451,8 +478,6 @@ body.dark-mode .search-highlight {
   right: 80px;
   min-width: 320px;
   max-width: 95vw;
-  background: rgba(255,255,255,0.98);
-  border: 1px solid #eee;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   z-index: 1001;
@@ -462,8 +487,6 @@ body.dark-mode .search-highlight {
   padding: 22px 28px 18px 28px;
 }
 body.dark-mode #settings-menu {
-  background: rgba(34,36,37,0.97);
-  border: 1px solid #333;
   color: #f1f1f1;
 }
 .settings-title {
@@ -535,8 +558,6 @@ body.dark-mode .settings-close-btn:hover {
   min-width: 320px;
   max-width: 95vw;
   max-height: 80vh;
-  background: rgba(255,255,255,0.98);
-  border: 1px solid #eee;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   z-index: 2000;
@@ -546,8 +567,6 @@ body.dark-mode .settings-close-btn:hover {
   padding: 0;
 }
 body.dark-mode #info-menu {
-  background: rgba(34,36,37,0.97);
-  border: 1px solid #333;
   color: #f1f1f1;
 }
 .info-menu-content {
@@ -746,17 +765,21 @@ body.editor-open #info-bar {
   width: 50vw;
 }
 @media (max-width: 900px) {
-  body.editor-open svg,
   body.editor-open #editor-container {
     width: 100vw;
+    height: 50vh;
+    top: 0;
     left: 0;
   }
-  body.editor-open #editor-container {
-    width: 100vw;
+  body.editor-open svg {
+    width: 100vw !important;
+    height: 50vh !important;
+    top: 50vh;
     left: 0;
   }
   body.editor-open #info-bar {
     left: 0;
     width: 100vw;
+    bottom: 0;
   }
 }
