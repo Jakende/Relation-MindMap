@@ -985,6 +985,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const stickyNodesToggle = document.getElementById('sticky-nodes-toggle');
   const searchToggle = document.getElementById('search-toggle');
   const searchBar = document.getElementById('search-bar');
+  const searchResults = document.getElementById('search-results');
 
   // --- Export-Button ---
   exportToggle.addEventListener('click', (e) => {
@@ -1228,10 +1229,8 @@ window.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
     const hidden = searchBar.classList.toggle("is-hidden");
     searchToggle.classList.toggle("toggle-btn--active", !hidden);
-<<<<<<< codex/füge-option-zum-ein--und-ausblenden-der-suche-hinzu
     searchToggle.classList.toggle("is-hidden", !hidden);
-=======
->>>>>>> main
+    searchToggle.classList.toggle("is-hidden", !hidden);
   });
 
   // --- Klick außerhalb schließt Menüs ---
@@ -1258,10 +1257,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!searchBar.contains(e.target) && e.target !== searchToggle) {
       searchBar.classList.add("is-hidden");
       searchToggle.classList.remove("toggle-btn--active");
-<<<<<<< codex/füge-option-zum-ein--und-ausblenden-der-suche-hinzu
       searchToggle.classList.remove("is-hidden");
-=======
->>>>>>> main
+      if (searchResults) searchResults.style.display = "none";
+      searchToggle.classList.remove("is-hidden");
     }
   });
   // --- Export-Funktionen ---
