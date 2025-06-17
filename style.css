@@ -128,15 +128,15 @@ body.dark-mode, html.dark-mode {
 /* Wrapper for responsive placement */
 #controls-wrapper { position: relative; }
 
+/* Use a grid layout on small screens for consistent spacing */
 @media (max-width: 600px) {
   #controls-wrapper {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 10px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
     gap: 8px;
     padding: 0 10px;
   }
