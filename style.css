@@ -96,6 +96,11 @@ body.dark-mode, html.dark-mode {
 .toggle-btn--relations { bottom: 156px; }
 .toggle-btn--palette   { bottom: 248px; }
 .toggle-btn--darkmode  { bottom: 294px; }
+.toggle-btn--search {
+  left: 24px;
+  right: auto;
+  top: 18px;
+}
 .toggle-btn--info {
   left: 24px;
   right: auto;
