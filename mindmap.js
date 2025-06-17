@@ -983,6 +983,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const importFile = document.getElementById('import-file');
   const clearToggle = document.getElementById('clear-toggle');
   const stickyNodesToggle = document.getElementById('sticky-nodes-toggle');
+  const searchToggle = document.getElementById('search-toggle');
+  const searchBar = document.getElementById('search-bar');
+  const searchResults = document.getElementById('search-results');
 
   // --- Export-Button ---
   exportToggle.addEventListener('click', (e) => {
@@ -1221,6 +1224,14 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+  // --- Search-Button ---
+  searchToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const hidden = searchBar.classList.toggle("is-hidden");
+    searchToggle.classList.toggle("toggle-btn--active", !hidden);
+    searchToggle.classList.toggle("is-hidden", !hidden);
+  });
+
   // --- Klick außerhalb schließt Menüs ---
   document.addEventListener('click', (e) => {
     if (!paletteMenu.contains(e.target) && e.target !== paletteToggle) {
@@ -1240,7 +1251,13 @@ window.addEventListener('DOMContentLoaded', () => {
       document.querySelector('svg').style.height = '';
     }
     if (!infoMenu.contains(e.target) && e.target !== infoToggle) {
-      infoMenu.classList.add('is-hidden');
+      infoMenu.classList.add("is-hidden");
+    }
+    if (!searchBar.contains(e.target) && e.target !== searchToggle) {
+      searchBar.classList.add("is-hidden");
+      searchToggle.classList.remove("toggle-btn--active");
+      searchToggle.classList.remove("is-hidden");
+      if (searchResults) searchResults.style.display = "none";
     }
   });
   // --- Export-Funktionen ---
