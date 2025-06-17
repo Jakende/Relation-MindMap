@@ -37,4 +37,4 @@ Archiv/           Older files, screenshots and code references
 
 ## License
 
-No license information is provided in this repository. If you plan to use or modify this project, please verify the licensing terms with the original author.
+This project is licensed under the [Apache License 2.0](LICENSE).
