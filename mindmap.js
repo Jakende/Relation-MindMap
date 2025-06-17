@@ -1079,6 +1079,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const importFile = document.getElementById('import-file');
   const clearToggle = document.getElementById('clear-toggle');
   const stickyNodesToggle = document.getElementById('sticky-nodes-toggle');
+  const searchToggle = document.getElementById('search-toggle');
+  const searchBar = document.getElementById('search-bar');
   const resizeHandle = document.getElementById('editor-resizer');
   let isResizing = false;
 
@@ -1324,6 +1326,16 @@ window.addEventListener('DOMContentLoaded', () => {
     document.documentElement.classList.toggle('dark-mode');
     darkToggle.classList.toggle('toggle-btn--active', body.classList.contains('dark-mode'));
   });
+  // --- Search-Button ---
+  searchToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = searchBar.classList.toggle('is-hidden') === false;
+    searchToggle.classList.toggle('toggle-btn--active', isOpen);
+    paletteMenu.classList.add('is-hidden');
+    paletteToggle.classList.remove('toggle-btn--active');
+    exportBar.classList.add('is-hidden');
+    exportToggle.classList.remove('toggle-btn--active');
+  });
   // --- Relations-Toggle (optional, falls vorhanden) ---
   const relationsToggle = document.getElementById('relations-toggle');
   if (relationsToggle) {
@@ -1390,6 +1402,10 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     if (!infoMenu.contains(e.target) && e.target !== infoToggle) {
       infoMenu.classList.add('is-hidden');
+    }
+    if (!searchBar.contains(e.target) && e.target !== searchToggle) {
+      searchBar.classList.add('is-hidden');
+      searchToggle.classList.remove('toggle-btn--active');
     }
   });
   // --- Export-Funktionen ---
