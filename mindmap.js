@@ -1230,6 +1230,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const hidden = searchBar.classList.toggle("is-hidden");
     searchToggle.classList.toggle("toggle-btn--active", !hidden);
     searchToggle.classList.toggle("is-hidden", !hidden);
+    searchToggle.classList.toggle("is-hidden", !hidden);
   });
 
   // --- Klick außerhalb schließt Menüs ---
@@ -1258,6 +1259,7 @@ window.addEventListener('DOMContentLoaded', () => {
       searchToggle.classList.remove("toggle-btn--active");
       searchToggle.classList.remove("is-hidden");
       if (searchResults) searchResults.style.display = "none";
+      searchToggle.classList.remove("is-hidden");
     }
   });
   // --- Export-Funktionen ---
