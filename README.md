@@ -17,7 +17,7 @@ For a comprehensive overview of all features and functions, refer to [`memory-ba
 ## Getting Started
 
 1. **Open the Application**: Simply open `index.html` in any modern web browser. All necessary dependencies are loaded via CDN, eliminating the need for a build step or server.
-   
+
    ```bash
    ./index.html
    ```
@@ -34,8 +34,8 @@ For a comprehensive overview of all features and functions, refer to [`memory-ba
 ## Repository Structure
 
 The repository is organized as follows:
-```
-index.html        # HTML entry point for the application
+
+```index.html        # HTML entry point for the application
 mindmap.js        # Main JavaScript logic utilizing D3.js
 style.css         # Styling for the UI, including dark mode support
 memory-bank/      # Additional documentation and examples (in German)
