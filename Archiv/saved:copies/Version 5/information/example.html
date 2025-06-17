@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Argumentationsstruktur – test.ad Visualisierung</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+    svg { width: 100vw; height: 100vh; display: block; }
+    .link { stroke: #666; stroke-opacity: 0.6; stroke-width: 1.5px; }
+    .node circle { stroke: #fff; stroke-width: 1.5px; }
+    .node text { font: 12px sans-serif; pointer-events: none; text-anchor: middle; }
+    #info-bar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.95);
+      border-top: 1px solid #ccc;
+      font: 16px sans-serif;
+      padding: 10px 20px;
+      min-height: 32px;
+      z-index: 10;
+      box-sizing: border-box;
+      color: #222;
+      pointer-events: none;
+      white-space: pre-line;
+    }
+    #info-bar .path { font-weight: bold; }
+    #info-bar .node { color: #0074d9; }
+  </style>
+</head>
+<body>
+  <svg></svg>
+  <div id="info-bar"></div>
+  <script>
+    // Argumentstruktur aus test.ad als JSON
+    const data = {
+      name: "Alessa Karlinski hat ein differenziertes juristisches Kompetenzprofil",
+      children: [
+        {
+          name: "Frühe akademische Sozialisation spricht für fortgeschrittene Kompetenzen",
+          children: [
+            { 
+              name: "Mitarbeit an Lehrstuhl und Publikationen deuten auf Integration in wissenschaftliche Diskurse hin",
+              children: [
+                { name: "Publikationen in anerkannten Fachzeitschriften" },
+                { name: "Teilnahme an wissenschaftlichen Konferenzen" }
+              ]
+            },
+            { 
+              name: "Silver et al. (2022): Studentische Hilfskräfte zeigen hohe Motivation und Analysekompetenz",
+              children: [
+                { name: "Motivation: Überdurchschnittliches Engagement" },
+                { name: "Analysekompetenz: Komplexe Aufgabenbearbeitung" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Rechtsspezifische Recherche- und Analysekompetenzen sind wahrscheinlich vorhanden",
+          children: [
+            { 
+              name: "Die Tätigkeit an der Professur impliziert routinierte Anwendung von AALL-Standards (2012)",
+              children: [
+                { name: "Recherche in juristischen Datenbanken" },
+                { name: "Anwendung von Zitierstandards" }
+              ]
+            },
+            { 
+              name: "Zusätzliche Methodenkompetenz",
+              children: [
+                { name: "Erfahrung mit empirischer Forschung" },
+                { name: "Kenntnisse in Literaturverwaltung" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Juristische Studierende zeigen häufig spezifische Charakterstärken",
+          children: [
+            { 
+              name: "Kern & Bowling (2015): Urteilsvermögen, Neugier, Fairness korrelieren mit Studienerfolg",
+              children: [
+                { name: "Urteilsvermögen: Fähigkeit zur differenzierten Bewertung" },
+                { name: "Neugier: Bereitschaft zur Erschließung neuer Themenfelder" },
+                { name: "Fairness: Objektivität in der Argumentation" }
+              ]
+            },
+            { 
+              name: "Cooper & Gurung (2018): Erfolgreiche Studierende nutzen Selbsttests und elaboratives Wiederholen",
+              children: [
+                { name: "Selbsttests: Regelmäßige Wissensüberprüfung" },
+                { name: "Elaboratives Wiederholen: Vertiefte Auseinandersetzung mit Inhalten" }
+              ]
+            },
+            { 
+              name: "Tutor: innen-Tätigkeit unterstützt diese Lernstrategien",
+              children: [
+                { name: "Vermittlung von Lerninhalten an andere" },
+                { name: "Reflexion des eigenen Wissens" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Fachspezifische Interessenschwerpunkte lassen sich aus Publikationen ableiten",
+          children: [
+            { 
+              name: "Themen wie islamisches Scheidungsrecht und AGB-Kontrolle verweisen auf IPR und Normkonflikte",
+              children: [
+                { name: "Islamisches Scheidungsrecht: Interkulturelle Aspekte" },
+                { name: "AGB-Kontrolle: Verbraucherschutz" }
+              ]
+            },
+            { 
+              name: "Daraus folgt eine Affinität zu Mehrebenenstrukturen und interkultureller Sensibilität",
+              children: [
+                { name: "Mehrebenenstrukturen: EU-Recht und nationales Recht" },
+                { name: "Interkulturelle Sensibilität: Umgang mit Diversität" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Eine wissenschaftliche Karriere ist wahrscheinlich",
+          children: [
+            { 
+              name: "Bei fortgesetzter Forschung ist ein Übergang in Promotion oder forschungsnahe Felder zu erwarten",
+              children: [
+                { name: "Promotion: Vertiefung eines Spezialgebiets" },
+                { name: "Forschungsnahe Felder: Wissenschaftsmanagement, Politikberatung" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Limitation: Aussagen basieren auf Gruppenmerkmalen, nicht auf individuellen Einstellungen",
+          children: [
+            { 
+              name: "Es wurden ausschließlich belegbare biografische Daten berücksichtigt",
+              children: [
+                { name: "Keine Aussagen zu persönlichen Präferenzen" },
+                { name: "Gruppenbasierte Annahmen" }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    const svg = d3.select("svg"),
+          width  = window.innerWidth,
+          height = window.innerHeight;
+
+    const g = svg.append("g");
+
+    const root = d3.hierarchy(data);
+    const nodes = root.descendants();
+    const links = root.links();
+
+    nodes.forEach(d => d.r = 20 - d.depth * 3 + 5);
+
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.index).distance(120).strength(1))
+      .force("charge", d3.forceManyBody().strength(-220))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(d => d.r + 5));
+
+    const link = g.append("g")
+      .attr("class", "links")
+      .selectAll("line")
+      .data(links)
+      .enter().append("line")
+        .attr("class", "link");
+
+    const infoBar = document.getElementById("info-bar");
+
+    const node = g.append("g")
+      .attr("class", "nodes")
+      .selectAll("g")
+      .data(nodes)
+      .enter().append("g")
+        .attr("class", "node")
+        .on("click", (event, d) => {
+          event.stopPropagation();
+
+          d3.select(event.currentTarget).select("circle")
+            .transition().duration(300).attr("r", d.r * 1.5)
+            .transition().duration(300).attr("r", d.r);
+
+          // Hide all texts
+          g.selectAll("text").style("opacity", 0);
+
+          // Build path from root to clicked node
+          let path = [];
+          let current = d;
+          while (current) {
+            path.unshift(current);
+            current = current.parent;
+          }
+          const pathText = path.map(n => n.data.name).join(" → ");
+          const nodeText = d.data.name;
+
+          // Show info at the bottom
+          infoBar.innerHTML = `<span class="path">${pathText}</span><br><span class="node">${nodeText}</span>`;
+
+          // Highlight path nodes and links, fade others
+          const pathSet = new Set(path.map(n => n));
+          const pathLinks = new Set();
+          for (let i = 1; i < path.length; ++i) {
+            pathLinks.add(`${path[i-1].index}-${path[i].index}`);
+          }
+
+          g.selectAll(".node")
+            .style("opacity", n => pathSet.has(n) ? 1 : 0.15);
+
+          g.selectAll(".link")
+            .style("opacity", l => pathLinks.has(`${l.source.index}-${l.target.index}`) ? 1 : 0.15);
+        })
+        .call(d3.drag()
+          .on("start", (event,d) => {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x; d.fy = d.y;
+          })
+          .on("drag", (event,d) => { d.fx = event.x; d.fy = event.y; })
+          .on("end", (event,d) => {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null; d.fy = null;
+          })
+        );
+
+    node.append("circle")
+      .attr("r", d => d.r)
+      .attr("fill", d => d3.schemeCategory10[d.depth % 10]);
+
+    node.append("text")
+      .attr("dy", ".35em")
+      .style("opacity", 0)
+      .text(d => d.data.name);
+
+    // Reset highlighting and text when clicking on background
+    svg.on("click", () => {
+      g.selectAll(".node").style("opacity", 1);
+      g.selectAll(".link").style("opacity", 1);
+      g.selectAll("text").style("opacity", 0);
+      infoBar.innerHTML = "";
+    });
+
+    svg.call(d3.zoom()
+      .scaleExtent([0.4, 4])
+      .on("zoom", event => {
+        g.attr("transform", event.transform);
+        // Hide all texts on zoom
+        g.selectAll("text").style("opacity", 0);
+      })
+    );
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+
+      node.attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    window.addEventListener("resize", () => {
+      const w = window.innerWidth, h = window.innerHeight;
+      svg.attr("width", w).attr("height", h);
+      simulation.force("center", d3.forceCenter(w/2, h/2));
+      simulation.alpha(0.5).restart();
+    });
+  </script>
+</body>
+</html>

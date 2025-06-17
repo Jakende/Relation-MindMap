@@ -1,0 +1,110 @@
+  - Stakeholder
+    - Bewertung: 5
+      - Bayerisches Staatsministerium für Wohnen, Bau und Verkehr
+        -> [funds] Verwaltungsgemeinschaft der drei Gemeinden (Wartenberg, Langpreising, Berglern)
+        -> [regulates] Kommunalverwaltung & politische Akteur:innen
+      - Regionaler Planungsverband München
+        -> [coordinates] Verwaltungsgemeinschaft der drei Gemeinden (Wartenberg, Langpreising, Berglern)
+        -> [advises] Stadtverwaltung
+      - Bayernwerk Netz GmbH (Verteilnetzbetreiber)
+        -> [operates] Netzanschlusspunkte
+        -> [supplies] E.ON Energie Deutschland
+      - Solarparkbetreiber:innen
+        -> [leases] Bäuer:innen (organisiert)
+        -> [sells to] Bürgerenergiegenossenschaften
+      - Windparkbetreiber:innen
+        -> [leases] Gemeinden
+        -> [connects] Netzbetreiber:innen & Mobilitäts-Hubs
+      - Stadtverwaltung
+        -> [approves] Multimodale Mobilitäts-Hubs
+        -> [manages] Öffentlichen Raum
+      - Verwaltungsgemeinschaft der drei Gemeinden (Wartenberg, Langpreising, Berglern)
+        -> [authorizes] Kommunalprojekte
+        -> [contracts] Verkehrsplanungsbüros
+      - Münchner Verkehrs- und Tarifverbund (MVV)
+        -> [operates] ÖPNV-Linien
+        -> [partners] Mobilitätskoordinator Landkreis Erding
+      - Mobilitätskoordinator Landkreis Erding
+        -> [mediates] Regionalbusgesellschaften
+        -> [reports to] Verwaltungsgemeinschaft
+      - Verkehrsplanungsbüros
+        -> [designs] Multimodale Mobilitäts-Hubs
+        -> [reports to] Stadtverwaltung
+      - Gemeinden
+        -> [own] Flächen für Agrivoltaik-Pilotflächen
+        -> [lease to] Solarparkbetreiber:innen
+
+    - Bewertung: 4
+      - E.ON Energie Deutschland
+        -> [supplies] Bürgerenergiegenossenschaften
+        -> [buys from] Windparkbetreiber:innen
+      - Bürgerenergiegenossenschaften
+        -> [partners] Energieagentur Ebersberg-München
+        -> [aggregates] Prosumer:innen
+      - Energieagentur Ebersberg-München
+        -> [advises] Kommunalverwaltung & politische Akteur:innen
+        -> [trains] Bürger:innen in Online-Plattform
+      - Regionalbusgesellschaften
+        -> [contracts with] Mobilitätskoordinator Landkreis Erding
+        -> [reports to] MVV
+      - Fahrradverleihsysteme (MVG Rad)
+        -> [integrates] Multimodale Mobilitäts-Hubs
+        -> [reports usage to] Stadtverwaltung
+      - Ladeinfrastrukturbetreiber (Allego, Tank & Rast)
+        -> [installs] V2G-Stationen in Quartiersgaragen
+        -> [partners] Energieversorger:innen & Netzbetreiber:innen
+      - BMW
+        -> [funds] Pilotprojekte Ladeinfrastruktur
+      - Flughafen München (Franz-Josef-Strauß)
+        -> [partners] Jungheinrich (Moosburg) bei Mobilitätslösungen
+      - Jungheinrich (Moosburg)
+        -> [designs] Logistik-Mobility-Hubs
+      - Gasnetzbetreiber (Open Grid Europe)
+        -> [supplies] Industriekunden
+        -> [interfaces] Stromnetzbetreiber:innen
+      - Bürgerinitiative Energiewende
+        -> [influences] Gemeinderatssitzungen
+        -> [mobilizes] Bürger:innen in Workshops
+      - Bäuer:innen (organisiert)
+        -> [negotiate leases with] Solarparkbetreiber:innen
+        -> [coordinate] Agrivoltaik-Field Workshops
+      - Bäuer:innen (nicht organisiert)
+        -> [receive info from] Bauernverband
+      - Waldbesitzer:innen / Forstamt
+        -> [manages] Grünkorridore
+
+    - Bewertung: 3
+      - Fahrgastbeirat ÖPNV
+        -> [advises] MVV
+        -> [reports rider issues to] Stadtverwaltung
+      - Fridays for Future Gruppe Erding
+        -> [mobilizes] Anwohner:innen
+        -> [partners] Bürgerinitiative Energiewende
+      - Pendler:innen
+        -> [use] ÖPNV-Linien
+        -> [participate in] Isochronen-Analysen
+      - Anwohner:innen
+        -> [provide feedback to] Online-Plattform
+        -> [join] Dialog-Radwanderungen
+      - Pfarrgemeinde
+        -> [hosts] Community-Pflanzaktionen
+      - Kirchliche Organisationen
+        -> [support] Grün- und Blühkorridore
+
+    - Bewertung: 2
+      - Carsharing-Anbieter
+        -> [operates] in Mobilitäts-Hubs
+        -> [partners] MVV für P+R-Angebote
+      - Taxiunternehmen
+        -> [coordinates with] Mobilitätskoordinator Landkreis Erding
+      - Hauseigentümer:innen mit PV-Anlagen
+        -> [feed excess into] Bürgerenergiegenossenschaften
+        -> [monitor via] Smart-Meter-Netzwerk
+
+    - Bewertung: 1
+      - Allgemeine Öffentlichkeit
+        -> [comments on] Partizipative Online-Plattform
+      - Lokale Medien
+        -> [reports about] Pilotprojekte
+      - Social-Media-Gruppen
+        -> [share updates from] Bürgerinitiative Energiewende

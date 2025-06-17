@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>mind - mapping</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    :root {
+      --palette-primary: #0074d9;
+      --palette-accent: #4fc3f7;
+      --palette-bg: #f9f9fb;
+      --palette-dark-bg: #181a1b;
+      --palette-text: #222;
+      --palette-dark-text: #f1f1f1;
+      --palette-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+      --palette-btn-radius: 8px;
+      --palette-btn-padding: 12px 20px;
+      --palette-btn-gap: 12px;
+      --palette-focus-outline: 3px solid #ff9800;
+      --palette-tooltip-border: 1.5px solid #0074d9;
+      --palette-tooltip-dark-border: 1.5px solid #4fc3f7;
+      --palette-scrollbar-thumb: #b3c6e0;
+      --palette-scrollbar-thumb-dark: #444;
+      --palette-scrollbar-bg: #f1f1f1;
+      --palette-scrollbar-bg-dark: #222;
+    }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      font-family: 'Roboto', Arial, sans-serif;
+      font-size: 16px;
+      color: var(--palette-text);
+      background: var(--palette-bg);
+      transition: background 0.5s cubic-bezier(.4,0,.2,1), color 0.5s cubic-bezier(.4,0,.2,1);
+    }
+    body.dark-mode, html.dark-mode {
+      background: var(--palette-dark-bg);
+      color: var(--palette-dark-text);
+    }
+    svg { width: 100%; height: 100%; display: block; }
+    .link { stroke: #666; stroke-opacity: 0.6; stroke-width: 1.5px; }
+    .node circle { stroke: #fff; stroke-width: 1.5px; }
+    .node.center circle {
+      stroke-width: 4px;
+      stroke: #111;
+      filter: drop-shadow(var(--palette-shadow));
+      transition: stroke 0.3s;
+    }
+    body.dark-mode .node.center circle {
+      stroke: #fff;
+      filter: drop-shadow(var(--palette-shadow));
+    }
+    .node text {
+      font-family: 'Roboto', Arial, sans-serif;
+      font-size: 15px;
+      pointer-events: none;
+      text-anchor: middle;
+      fill: var(--palette-text);
+      font-weight: 400;
+      opacity: 0;
+      text-shadow: 0 1px 2px #fff, 0 0 2px #fff, 0 0 4px #fff;
+      transition: fill 0.3s, opacity 0.3s, text-shadow 0.3s;
+      paint-order: stroke fill;
+      stroke: #fff;
+      stroke-width: 2px;
+      stroke-opacity: 0.7;
+    }
+    body.dark-mode .node text {
+      fill: var(--palette-dark-text);
+      text-shadow: 0 1px 2px #222, 0 0 2px #222, 0 0 4px #222;
+      stroke: #222;
+      stroke-width: 2px;
+      stroke-opacity: 0.7;
+    }
+    .node.selected text {
+      opacity: 1 !important;
+      stroke-width: 3px;
+      stroke-opacity: 0.9;
+    }
+    .node:hover text {
+      opacity: 1 !important;
+      stroke-width: 3px;
+      stroke-opacity: 0.9;
+    }
+    #info-bar {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.97);
+      border-top: 1px solid #ccc;
+      font-size: 17px;
+      padding: 12px 24px;
+      min-height: 36px;
+      z-index: 10;
+      pointer-events: none;
+      white-space: pre-line;
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: flex-start;
+      color: #1a1a1a;
+      transition: background 0.5s, color 0.5s;
+      border-radius: 10px;
+    }
+    body.dark-mode #info-bar {
+      background: rgba(24,26,27,0.97);
+      color: #f1f1f1;
+      border-top: 1px solid #333;
+    }
+    #info-bar .path { font-weight: 500; color: var(--palette-primary); }
+    #info-bar .node { color: #0074d9; font-weight: 400; }
+    body.dark-mode #info-bar .path { color: #7ecbff; }
+    body.dark-mode #info-bar .node { color: #4fc3f7; }
+    #info-bar .desc {
+      margin-left: 18px;
+      font-size: 15px;
+      opacity: 0.85;
+    }
+    body.dark-mode #info-bar .desc { color: #bbb; }
+    #search-bar {
+      position: fixed; left: 0; top: 0;
+      background: rgba(255,255,255,0.7);
+      border-bottom: 1px solid #ccc;
+      padding: 12px 24px 14px;
+      display: flex; flex-direction: column;
+      gap: 8px;
+      width: 480px; max-width: 98vw;
+      box-shadow: 0 0 16px rgba(0,0,0,0.08);
+      backdrop-filter: blur(8px);
+      border-radius: 10px;
+    }
+    body.dark-mode #search-bar {
+      background: rgba(24,26,27,0.85);
+      border-bottom: 1px solid #333;
+      color: #f1f1f1;
+    }
+    #search-bar input, #search-bar button {
+      font-size: 17px; min-height: 48px;
+    }
+    #search-bar input {
+      width: 70%; max-width: 320px;
+      padding: 12px 16px;
+      border: 1px solid #bbb;
+      border-radius: var(--palette-btn-radius);
+      background: rgba(255,255,255,0.8);
+      outline: none;
+    }
+    #search-bar input:focus {
+      border: 1.5px solid var(--palette-primary);
+      background: #fff;
+    }
+    body.dark-mode #search-bar input {
+      background: rgba(34,36,37,0.95);
+      border: 1px solid #444;
+    }
+    body.dark-mode #search-bar input:focus {
+      border: 1.5px solid var(--palette-accent);
+      background: rgba(34,36,37,1);
+    }
+    #search-bar button {
+      padding: 12px 22px;
+      border: none;
+      border-radius: var(--palette-btn-radius);
+      background: rgba(0,116,217,0.12);
+      color: var(--palette-primary);
+      font-weight: 500;
+      cursor: pointer;
+    }
+    #search-bar button:hover, #search-bar button:focus {
+      background: var(--palette-primary);
+      color: #fff;
+      outline: 2px solid var(--palette-primary);
+    }
+    body.dark-mode #search-bar button {
+      background: rgba(79,195,247,0.12);
+      color: var(--palette-accent);
+    }
+    body.dark-mode #search-bar button:hover, body.dark-mode #search-bar button:focus {
+      background: var(--palette-accent);
+      color: #222;
+      outline: 2px solid var(--palette-accent);
+    }
+    #search-results {
+      max-width: 440px;
+      margin-top: 0;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #eee;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 6px 10px;
+      max-height: 180px;
+      overflow-y: auto;
+      display: none;
+      font-size: 15px;
+    }
+    body.dark-mode #search-results {
+      background: rgba(34,36,37,0.97);
+      border: 1px solid #333;
+      color: #f1f1f1;
+    }
+    .search-result { padding: 8px 0; cursor: pointer; }
+    .search-result:hover { background: #e6f7ff; }
+    body.dark-mode .search-result:hover { background: #54788a; }
+    .search-highlight {
+      font-weight: 700;
+      background: #cde0e8;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+    body.dark-mode .search-highlight {
+      background: #263238;
+      color: var(--palette-accent);
+    }
+    #darkmode-toggle, #palette-toggle, #export-toggle, #import-toggle, #clear-toggle, #edit-toggle, #fullscreen-toggle, #showall-toggle {
+      position: fixed; right: 24px; width: 44px; height: 44px;
+      border: none; border-radius: 50%;
+      background: rgba(0,0,0,0.08);
+      color: var(--palette-primary);
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      backdrop-filter: blur(8px);
+    }
+    #export-toggle { top: 18px; }
+    #import-toggle { top: 64px; }
+    #edit-toggle { top: 110px; }
+    #clear-toggle { top: 156px; }
+
+    #fullscreen-toggle { bottom: 64px; }
+    #showall-toggle    { bottom: 110px; }
+    #palette-toggle    { bottom: 156px; }
+    #darkmode-toggle   { bottom: 202px; }
+    #darkmode-toggle:hover, #palette-toggle:hover, #export-toggle:hover, #import-toggle:hover, #clear-toggle:hover, #edit-toggle:hover, #fullscreen-toggle:hover, #showall-toggle:hover {
+      background: var(--palette-primary);
+      color: #fff;
+      outline: 2px solid var(--palette-primary);
+    }
+    body.dark-mode #darkmode-toggle,
+    body.dark-mode #palette-toggle,
+    body.dark-mode #export-toggle,
+    body.dark-mode #import-toggle,
+    body.dark-mode #clear-toggle,
+    body.dark-mode #edit-toggle,
+    body.dark-mode #fullscreen-toggle,
+    body.dark-mode #showall-toggle {
+      background: rgba(255,255,255,0.08);
+      color: var(--palette-accent);
+    }
+    body.dark-mode #darkmode-toggle:hover,
+    body.dark-mode #palette-toggle:hover,
+    body.dark-mode #export-toggle:hover,
+    body.dark-mode #import-toggle:hover,
+    body.dark-mode #clear-toggle:hover,
+    body.dark-mode #edit-toggle:hover,
+    body.dark-mode #fullscreen-toggle:hover,
+    body.dark-mode #showall-toggle:hover {
+      background: var(--palette-accent);
+      color: #222;
+      outline: 2px solid var(--palette-accent);
+    }
+    #palette-menu, .export-bar {
+      position: fixed; right: 24px; display: none;
+      flex-direction: column; gap: 10px;
+      padding: 16px 18px;
+      background: rgba(255,255,255,0.98);
+      border: 1px solid #eee;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    #palette-menu { top: 110px; }
+    .export-bar { top: 164px; }
+    body.dark-mode #palette-menu,
+    body.dark-mode .export-bar {
+      background: rgba(34,36,37,0.97);
+      border: 1px solid #333;
+      color: #f1f1f1;
+    }
+    .palette-btn, .export-btn {
+      padding: 10px 20px;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      background: #f7f7fa;
+      color: #0074d9;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      min-width: 140px; min-height: 44px;
+    }
+    .palette-btn:hover, .export-btn:hover {
+      background: var(--palette-primary);
+      color: #fff;
+      border: 1.5px solid var(--palette-primary);
+      outline: 2px solid var(--palette-primary);
+    }
+    body.dark-mode .palette-btn, body.dark-mode .export-btn {
+      background: #23272b;
+      color: #4fc3f7;
+      border: 1px solid #444;
+    }
+    body.dark-mode .palette-btn:hover, body.dark-mode .export-btn:hover {
+      background: #4fc3f7;
+      color: #222;
+      border: 1.5px solid #4fc3f7;
+      outline: 2px solid #4fc3f7;
+    }
+    #editor-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 50vw;
+      height: 100vh;
+      background: #fff;
+      z-index: 100;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+      backdrop-filter: blur(8px);
+    }
+    #editor-container textarea {
+      width: 100%;
+      height: 100%;
+      font-size: 16px;
+      font-family: monospace;
+      border: none;
+      outline: none;
+      padding: 16px;
+      box-sizing: border-box;
+      resize: none;
+    }
+    #close-editor {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 101;
+      background: #fff;
+      color: #0074d9;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: background 0.3s, color 0.3s;
+      backdrop-filter: blur(8px);
+    }
+    #close-editor:hover {
+      background: #0074d9;
+      color: #fff;
+      border: 1.5px solid #0074d9;
+    }
+    body.dark-mode #editor-container {
+      background: #23272b;
+      border-right: 2px solid #444;
+    }
+    body.dark-mode #markdown-editor {
+      background: #23272b;
+      color: #f1f1f1;
+    }
+    body.dark-mode #markdown-editor:focus {
+      background: #181a1b;
+      border: 1.5px solid #4fc3f7;
+      outline: 2px solid #0074d9;
+    }
+    body.dark-mode #close-editor {
+      background: #23272b;
+      color: #4fc3f7;
+      border: 1px solid #444;
+    }
+    body.dark-mode #close-editor:hover {
+      background: #4fc3f7;
+      color: #222;
+      border: 1.5px solid #4fc3f7;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top right group: -->
+  <button id="export-toggle" title="Exportoptionen anzeigen" aria-label="Exportoptionen anzeigen">⬇️</button>
+  <button id="import-toggle" title="Datei importieren" aria-label="Datei importieren">📁</button>
+  <button id="edit-toggle" title="Markdown Editor anzeigen" aria-label="Markdown Editor anzeigen">✏️</button>
+  <button id="clear-toggle" title="Mindmap leeren" aria-label="Mindmap leeren">🗑️</button>
+
+  <!-- ...other HTML... -->
+
+  <!-- Bottom right group: -->
+  <button id="fullscreen-toggle" title="Vollbildmodus umschalten" aria-label="Vollbildmodus umschalten">⛶</button>
+  <button id="showall-toggle" title="Alle Texte anzeigen/ausblenden" aria-label="Alle Texte anzeigen/ausblenden">🅰️</button>
+  <button id="darkmode-toggle" title="Dark Mode umschalten" aria-label="Dark Mode umschalten">🌙</button>
+  <button id="palette-toggle" title="Farbschema auswählen" aria-label="Farbschema auswählen">🎨</button>
+
+  <input type="file" id="import-file" accept=".md,.json" style="display:none" />
+
+  <div id="palette-menu" role="menu" aria-label="Farbschema wählen" style="display:none;flex-direction:column;gap:10px;">
+    <div class="palette-title">Farbschema wählen</div>
+    <button class="palette-btn" data-scheme="category10">Klassisch (Standard)</button>
+    <button class="palette-btn" data-scheme="accent">Frisch & Akzentuiert</button>
+    <button class="palette-btn" data-scheme="dark2">Dunkel & Kontrastreich</button>
+    <button class="palette-btn" data-scheme="set2">Pastell & Ruhig</button>
+    <button class="palette-btn" data-scheme="greys">Graustufen</button>
+    <button class="palette-btn" data-scheme="bw">Schwarz & Weiß</button>
+    <button class="palette-btn" data-scheme="cb-friendly">Farbenblind-freundlich</button>
+  </div>
+
+  <div class="export-bar" id="export-bar" style="display:none;flex-direction:column;gap:10px;">
+    <button class="export-btn" id="export-json">Export JSON</button>
+    <button class="export-btn" id="export-md">Export .md</button>
+  </div>
+
+  <div id="search-bar" role="search" aria-label="Suche Stakeholder" style="display:flex;flex-direction:column;gap:8px;">
+    <input id="search-input" type="text" placeholder="Suche oder Frage stellen..." autocomplete="off">
+    <div>
+      <button id="search-btn">Suchen</button>
+      <button id="reset-btn">Zurücksetzen</button>
+    </div>
+    <div id="search-results" role="listbox"></div>
+  </div>
+
+  <div id="editor-container" style="display:none; position:fixed; top:0; left:0; width:50vw; height:100vh; background:#fff; z-index:100; box-shadow:2px 0 8px rgba(0,0,0,0.08); backdrop-filter:blur(8px);">
+    <textarea id="markdown-editor" style="width:100%; height:100%; font-size:16px; font-family:monospace; border:none; outline:none; padding:16px; box-sizing:border-box; resize:none;"></textarea>
+    <button id="close-editor" style="position:absolute; top:10px; right:10px; z-index:101;">Schließen</button>
+  </div>
+
+  <svg></svg>
+  <div id="info-bar"></div>
+
+  <script>
+    // --- Farbschemata ---
+    const colorSchemes = {
+      "category10": d3.schemeCategory10,
+      "accent": d3.schemeAccent,
+      "dark2": d3.schemeDark2,
+      "set2": d3.schemeSet2,
+      "greys": d3.schemeGreys[9],
+      "bw": ["#222", "#fff", "#888", "#000", "#bbb", "#444", "#eee", "#333", "#666", "#111"],
+      "cb-friendly": ["#0072B2","#E69F00","#009E73","#F0E442","#56B4E9","#D55E00","#CC79A7","#999999"]
+    };
+    let currentScheme = "category10";
+
+    // 1. Markdown‐Parser
+    function parseMarkdownToHierarchy(mdText) {
+      const lines = mdText.split('\n')
+        .map(line => {
+          const m = line.match(/^(\s*)([-<]{1,2}|->)?\s*(.+)$/);
+          return m ? { indent: m[1].length, text: m[3].trim() } : null;
+        })
+        .filter(item => item && item.text);
+      const root = { name: 'root', children: [] };
+      const stack = [{ node: root, indent: -1 }];
+      lines.forEach(({ indent, text }) => {
+        const node = { name: text, children: [] };
+        while (indent <= stack[stack.length-1].indent) stack.pop();
+        stack[stack.length-1].node.children.push(node);
+        stack.push({ node, indent });
+      });
+      return root.children.length === 1 ? root.children[0] : root;
+    }
+
+    // 2. Graph‐Initialisierung
+    function initializeGraph(data) {
+      const svg = d3.select("svg"),
+            width  = window.innerWidth,
+            height = window.innerHeight;
+
+      svg.selectAll("*").remove(); // Reset SVG for re-render
+
+      const g = svg.append("g");
+
+      const root = d3.hierarchy(data);
+      const nodes = root.descendants();
+      const links = root.links();
+
+      nodes.forEach(d => d.r = Math.max(5, 20 - d.depth * 3 + 5));
+
+      // --- Color function ---
+      function getColor(d) {
+        const scheme = colorSchemes[currentScheme] || d3.schemeCategory10;
+        if (currentScheme === "greys") {
+          return scheme[Math.min(d.depth * 2, scheme.length-1)];
+        }
+        return scheme[d.depth % scheme.length];
+      }
+
+      const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.index).distance(120).strength(1))
+        .force("charge", d3.forceManyBody().strength(-220))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(d => d.r + 5));
+
+      const link = g.append("g")
+        .attr("class", "links")
+        .selectAll("line")
+        .data(links)
+        .enter().append("line")
+          .attr("class", "link");
+
+      const infoBar = document.getElementById("info-bar");
+      const searchInput = document.getElementById("search-input");
+      const searchBtn = document.getElementById("search-btn");
+      const resetBtn = document.getElementById("reset-btn");
+      const searchResults = document.getElementById("search-results");
+
+      // --- Suche ---
+      function highlightMatch(text, query) {
+        if (!query) return text;
+        const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')})`, "gi");
+        return text.replace(re, '<span class="search-highlight">$1</span>');
+      }
+      function showSearchResults(query) {
+        const showResults = query && query.length > 0;
+        searchResults.style.display = showResults ? "block" : "none";
+        if (!query) {
+          searchResults.innerHTML = "";
+          infoBar.innerHTML = "";
+          g.selectAll(".node").style("opacity", 1);
+          g.selectAll(".link").style("opacity", 1);
+          return;
+        }
+        const matches = g.selectAll(".node").data().filter(n => n.data.name.toLowerCase().includes(query.toLowerCase()));
+        if (matches.length === 0) {
+          searchResults.innerHTML = `<div style="color:#d00;">Keine Treffer gefunden.</div>`;
+          infoBar.innerHTML = `<span style="color:#d00;">Keine Treffer gefunden.</span>`;
+          g.selectAll(".node").style("opacity", 0.15);
+          g.selectAll(".link").style("opacity", 0.15);
+          return;
+        }
+        searchResults.innerHTML = matches.map((n, i) => {
+          let path = [];
+          let current = n;
+          while (current) {
+            path.unshift(current.data.name);
+            current = current.parent;
+          }
+          return `<div class="search-result" data-index="${n.index}">${highlightMatch(path.join(" → "), query)}</div>`;
+        }).join("");
+        // Highlight nodes
+        const matchSet = new Set(matches.map(n => n));
+        g.selectAll(".node").style("opacity", n => matchSet.has(n) ? 1 : 0.15);
+        g.selectAll(".link").style("opacity", 0.15);
+      }
+      searchBtn.onclick = () => showSearchResults(searchInput.value);
+      searchInput.oninput = () => showSearchResults(searchInput.value);
+      resetBtn.onclick = () => {
+        searchInput.value = "";
+        searchResults.style.display = "none";
+        infoBar.innerHTML = "";
+        g.selectAll(".node").style("opacity", 1);
+        g.selectAll(".link").style("opacity", 1);
+      };
+      searchResults.onclick = (e) => {
+        if (e.target.classList.contains("search-result")) {
+          const idx = +e.target.getAttribute("data-index");
+          const n = g.selectAll(".node").data().find(n => n.index === idx);
+          if (n) {
+            // Simuliere Klick auf Knoten
+            g.selectAll(".node").filter(d => d.index === idx).dispatch("click");
+            searchResults.style.display = "none";
+          }
+        }
+      };
+
+      // --- Knoten & Interaktion ---
+      const node = g.append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
+        .data(nodes)
+        .enter().append("g")
+          .attr("class", "node")
+          .on("click", (event, d) => {
+            event.stopPropagation();
+            d3.select(event.currentTarget).select("circle")
+              .transition().duration(300).attr("r", d.r * 1.5)
+              .transition().duration(300).attr("r", d.r);
+            // Build path from root to clicked node
+            let path = [];
+            let current = d;
+            while (current) {
+              path.unshift(current);
+              current = current.parent;
+            }
+            const pathText = path.map(n => n.data.name).join(" → ");
+            const nodeText = d.data.name;
+            infoBar.innerHTML = `<span class="path">${pathText}</span>`;
+            const pathSet = new Set(path.map(n => n));
+            const pathLinks = new Set();
+            for (let i = 1; i < path.length; ++i) {
+              pathLinks.add(`${path[i-1].index}-${path[i].index}`);
+            }
+            g.selectAll(".node")
+              .style("opacity", n => pathSet.has(n) ? 1 : 0.15);
+            g.selectAll(".link")
+              .style("opacity", l => pathLinks.has(`${l.source.index}-${l.target.index}`) ? 1 : 0.15);
+            // Show text for all nodes in path
+            g.selectAll("text")
+              .style("opacity", n => pathSet.has(n) ? 1 : 0);
+          })
+          .on("mouseover", function(event, d) {
+            d3.select(this).select("text").style("opacity", 1);
+          })
+          .on("mouseout", function(event, d) {
+            // Only hide if not in selected path
+            const text = d3.select(this).select("text");
+            if (!text.empty() && text.style("opacity") !== "1") {
+              text.style("opacity", 0);
+            }
+          })
+          .call(d3.drag()
+            .on("start", (event,d) => {
+              if (!event.active) simulation.alphaTarget(0.3).restart();
+              d.fx = d.x; d.fy = d.y;
+            })
+            .on("drag", (event,d) => { d.fx = event.x; d.fy = event.y; })
+            .on("end", (event,d) => {
+              if (!event.active) simulation.alphaTarget(0);
+              d.fx = null; d.fy = null;
+            })
+          );
+
+      node.append("circle")
+        .attr("r", d => d.r)
+        .attr("fill", d => getColor(d));
+
+      const MAX_LINE_LENGTH = 18; // You can adjust this value
+
+      function wrapText(text, maxLen) {
+        // Split by space, build lines
+        const words = text.split(' ');
+        let lines = [];
+        let current = '';
+        for (let word of words) {
+          if ((current + ' ' + word).trim().length > maxLen) {
+            if (current) lines.push(current.trim());
+            current = word;
+          } else {
+            current += ' ' + word;
+          }
+        }
+        if (current) lines.push(current.trim());
+        return lines;
+      }
+
+      node.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dy", ".35em")
+        .style("opacity", 0)
+        .each(function(d) {
+          const lines = wrapText(d.data.name, MAX_LINE_LENGTH);
+          lines.forEach((line, i) => {
+            d3.select(this)
+              .append("tspan")
+              .attr("x", 0)
+              .attr("dy", i === 0 ? 0 : "1.2em")
+              .text(line);
+          });
+        });
+
+      if (showAllTexts) {
+        g.selectAll('.node text').style('opacity', 1);
+      }
+
+      // Reset highlighting and text when clicking on background
+      svg.on("click", () => {
+        g.selectAll(".node").style("opacity", 1);
+        g.selectAll(".link").style("opacity", 1);
+        g.selectAll("text").style("opacity", 0);
+        infoBar.innerHTML = "";
+      });
+
+      svg.call(d3.zoom()
+        .scaleExtent([0.3, 4])
+        .on("zoom", event => {
+          g.attr("transform", event.transform);
+          if (!showAllTexts) {
+            g.selectAll("text").style("opacity", 0);
+          }
+        })
+      );
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+        node.attr("transform", d => `translate(${d.x},${d.y})`);
+      });
+
+      window.addEventListener("resize", () => {
+        const w = window.innerWidth, h = window.innerHeight;
+        svg.attr("width", w).attr("height", h);
+        simulation.force("center", d3.forceCenter(w/2, h/2));
+        simulation.alpha(0.5).restart();
+      });
+
+      // --- Export ---
+      document.getElementById("export-json").onclick = () => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "mindmap.json";
+        a.click();
+      };
+      document.getElementById("export-md").onclick = () => {
+        function toAd(node, indent = 0) {
+          let out = " ".repeat(indent) + "- " + node.name + "\n";
+          if (node.children) {
+            for (const c of node.children) out += toAd(c, indent + 4);
+          }
+          return out;
+        }
+        const ad = toAd(data);
+        const blob = new Blob([ad], {type: "text/plain"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "mindmap.md";
+        a.click();
+      };
+    }
+
+    // 3. Asynchrones Laden von data.md
+    let currentData = null;
+
+    // --- Save and restore current data using localStorage ---
+    function saveCurrentData() {
+      if (currentData) {
+        localStorage.setItem('mindmapData', JSON.stringify(currentData));
+      }
+    }
+    function loadCurrentData() {
+      const dataStr = localStorage.getItem('mindmapData');
+      if (dataStr) {
+        try {
+          const data = JSON.parse(dataStr);
+          loadDataAndRender(data);
+        } catch (e) {
+          localStorage.removeItem('mindmapData');
+        }
+      }
+    }
+
+    // Call loadCurrentData on page load
+    loadCurrentData();
+
+    // Save data after import
+    function loadDataAndRender(data) {
+      currentData = data;
+      initializeGraph(data);
+      saveCurrentData();
+    }
+
+    // --- Import/Upload logic ---
+    document.getElementById('import-toggle').addEventListener('click', () => {
+      document.getElementById('import-file').value = '';
+      document.getElementById('import-file').click();
+    });
+    document.getElementById('import-file').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      if (file.name.endsWith('.json')) {
+        reader.onload = function(evt) {
+          try {
+            const json = JSON.parse(evt.target.result);
+            loadDataAndRender(json);
+          } catch (err) {
+            alert('Fehler beim Parsen der JSON-Datei: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+      } else if (file.name.endsWith('.md')) {
+        reader.onload = function(evt) {
+          try {
+            const md = evt.target.result;
+            const data = parseMarkdownToHierarchy(md);
+            loadDataAndRender(data);
+          } catch (err) {
+            alert('Fehler beim Parsen der Markdown-Datei: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        alert('Bitte eine .md oder .json Datei auswählen.');
+      }
+    });
+
+    // --- Clear logic ---
+    document.getElementById('clear-toggle').addEventListener('click', () => {
+      d3.select('svg').selectAll('*').remove();
+      document.getElementById('info-bar').innerHTML = '';
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-results').innerHTML = '';
+      currentData = null;
+      localStorage.removeItem('mindmapData');
+    });
+
+    // --- Menü- und Darkmode-Logik ---
+    const paletteToggle = document.getElementById('palette-toggle');
+    const paletteMenu = document.getElementById('palette-menu');
+    const exportToggle = document.getElementById('export-toggle');
+    const exportBar = document.getElementById('export-bar');
+    const darkToggle = document.getElementById('darkmode-toggle');
+    const body = document.body;
+
+    paletteToggle.addEventListener('click', () => {
+      paletteMenu.style.display = paletteMenu.style.display === 'flex' ? 'none' : 'flex';
+      exportBar.style.display = 'none';
+    });
+    exportToggle.addEventListener('click', () => {
+      exportBar.style.display = exportBar.style.display === 'flex' ? 'none' : 'flex';
+      paletteMenu.style.display = 'none';
+    });
+    document.addEventListener('click', (e) => {
+      if (!paletteMenu.contains(e.target) && e.target !== paletteToggle) {
+        paletteMenu.style.display = 'none';
+      }
+      if (!exportBar.contains(e.target) && e.target !== exportToggle) {
+        exportBar.style.display = 'none';
+      }
+    });
+    darkToggle.addEventListener('click', () => {
+      body.classList.toggle('dark-mode');
+      document.documentElement.classList.toggle('dark-mode');
+    });
+
+    // --- Farbschema-Auswahl ---
+    document.querySelectorAll('.palette-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        currentScheme = btn.getAttribute('data-scheme');
+        paletteMenu.style.display = 'none';
+        // Re-render with new color scheme and current data
+        if (currentData) {
+          initializeGraph(currentData);
+        }
+      });
+    });
+
+    // --- Markdown Editor Logic ---
+    const editToggle = document.getElementById('edit-toggle');
+    const editorContainer = document.getElementById('editor-container');
+    const markdownEditor = document.getElementById('markdown-editor');
+    const closeEditor = document.getElementById('close-editor');
+    let editorActive = false;
+    editToggle.addEventListener('click', () => {
+      editorContainer.style.display = editorContainer.style.display === 'block' ? 'none' : 'block';
+      if (editorContainer.style.display === 'block') {
+        // Fill editor with current data as markdown if available
+        if (currentData) {
+          function toAd(node, indent = 0) {
+            let out = " ".repeat(indent) + "- " + node.name + "\n";
+            if (node.children) {
+              for (const c of node.children) out += toAd(c, indent + 4);
+            }
+            return out;
+          }
+          markdownEditor.value = toAd(currentData);
+        } else {
+          markdownEditor.value = '';
+        }
+        editorActive = true;
+        // Shrink network to right half
+        document.querySelector('svg').style.position = 'fixed';
+        document.querySelector('svg').style.left = '50vw';
+        document.querySelector('svg').style.width = '50vw';
+        document.querySelector('svg').style.height = '100vh';
+        markdownEditor.focus();
+      } else {
+        editorActive = false;
+        document.querySelector('svg').style.position = '';
+        document.querySelector('svg').style.left = '';
+        document.querySelector('svg').style.width = '';
+        document.querySelector('svg').style.height = '';
+      }
+    });
+    closeEditor.addEventListener('click', () => {
+      editorContainer.style.display = 'none';
+      editorActive = false;
+      document.querySelector('svg').style.position = '';
+      document.querySelector('svg').style.left = '';
+      document.querySelector('svg').style.width = '';
+      document.querySelector('svg').style.height = '';
+    });
+    // --- Tab and Enter support for markdown editor ---
+    markdownEditor.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        // Insert 4 spaces for tab
+        this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 4;
+        // Trigger input event for live update
+        this.dispatchEvent(new Event('input'));
+      } else if (e.key === 'Enter') {
+        // Smart list continuation
+        const start = this.selectionStart;
+        const before = this.value.substring(0, start);
+        const after = this.value.substring(this.selectionEnd);
+        const lastLine = before.split(/\r?\n/).pop();
+        const match = lastLine.match(/^(\s*-\s*)/);
+        if (match) {
+          e.preventDefault();
+          const indent = match[1];
+          const insert = '\n' + indent;
+          this.value = before + insert + after;
+          this.selectionStart = this.selectionEnd = start + insert.length;
+          this.dispatchEvent(new Event('input'));
+        }
+      } else if ((e.key === 'Backspace' || e.key === 'Delete') && e.altKey) {
+        // Option+Backspace: Remove one indentation level (4 spaces) at line start
+        const start = this.selectionStart;
+        const before = this.value.substring(0, start);
+        const after = this.value.substring(this.selectionEnd);
+        // Find start of current line
+        const lastNewline = before.lastIndexOf('\n');
+        const lineStart = lastNewline + 1;
+        const line = before.substring(lineStart, start);
+        const match = line.match(/^(\s{1,})/);
+        if (match && match[1].length >= 4) {
+          e.preventDefault();
+          // Remove 4 spaces from start of line
+          const newLine = line.replace(/^ {4}/, '');
+          this.value = before.substring(0, lineStart) + newLine + before.substring(lineStart + line.length) + after;
+          // Move cursor to new position (4 chars back)
+          const newPos = start - 4;
+          this.selectionStart = this.selectionEnd = newPos > lineStart ? newPos : lineStart;
+          this.dispatchEvent(new Event('input'));
+        }
+      }
+    });
+
+    // --- Live Markdown-to-Mindmap update ---
+    markdownEditor.addEventListener('input', function() {
+      const md = markdownEditor.value;
+      if (md.trim()) {
+        try {
+          const data = parseMarkdownToHierarchy(md);
+          loadDataAndRender(data);
+        } catch (err) {
+          // Fehler beim Parsen, ignoriere für Live-Update
+        }
+      } else {
+        // Wenn Editor leer, lösche Mindmap
+        d3.select('svg').selectAll('*').remove();
+        document.getElementById('info-bar').innerHTML = '';
+        currentData = null;
+        localStorage.removeItem('mindmapData');
+      }
+    });
+
+    // --- Fullscreen Button Logic ---
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    const showAllToggle = document.getElementById('showall-toggle');
+    let showAllTexts = false;
+
+    // --- Show/Hide all node texts logic ---
+    showAllToggle.addEventListener('click', () => {
+      showAllTexts = !showAllTexts;
+      d3.selectAll('.node text').style('opacity', showAllTexts ? 1 : 0);
+    });
+
+    fullscreenToggle.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+  </script>
+</body>
+</html>

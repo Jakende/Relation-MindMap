@@ -1,0 +1,71 @@
+- Stakeholder
+  - Bewertung: 5
+      - Energieversorger:innen & Netzbetreiber:innen
+          - Bayernwerk Netz GmbH (Verteilnetzbetreiber)
+          - Solarparkbetreiber:innen
+          - Windparkbetreiber:innen
+      - Kommunalverwaltung & politische Akteur:innen
+          - Stadtverwaltung
+          - Verwaltungsgemeinschaft der drei Gemeinden (Wartenberg, Langpreising, Berglern)
+      - Ministerien & Landesbehörden
+          - Bayerisches Staatsministerium für Wohnen, Bau und Verkehr
+          - Regionaler Planungsverband München
+      - Verkehr & Mobilität
+          - Münchner Verkehrs- und Tarifverbund (MVV)
+          - Mobilitätskoordinator Landkreis Erding
+      - Planungs- & Ingenieurbüros
+          - Verkehrsplanungsbüros
+      - Landeigentümer:innen
+          - Gemeinden 
+            - Wartenberg
+            - Langpreising
+            - Berglern
+          - Verwaltungsgemeinschaft der drei Gemeinden (Wartenberg, Langpreising, Berglern)
+          - Bauernverband
+
+  - Bewertung: 4
+      - Energieversorger:innen & Netzbetreiber:innen
+          - E.ON Energie Deutschland
+          - Bürgerenergiegenossenschaften
+          - Energieagentur Ebersberg-München
+      - Verkehr & Mobilität
+          - Regionalbusgesellschaften
+          - Fahrradverleihsysteme (MVG Rad)
+          - Ladeinfrastrukturbetreiber (z. B. Allego, Tank & Rast)
+      - Industrie & regionale Arbeitgeber
+          - BMW
+          - Flughafen München (Franz-Josef-Strauß)
+          - Jungheinrich (Moosburg)
+      - Netz & Infrastruktur
+          - Gasnetzbetreiber (z. B. Open Grid Europe)
+      - Bürgerinitiativen & NGOs
+          - Bürgerinitiative Energiewende
+      - Landeigentümer:innen
+          - Bäuer:innen 
+            - organisiert
+            - nicht organisiert
+          - Waldbesitzer:innen / Forstamt
+
+  - Bewertung: 3
+      - NGOs & Beiräte
+          - Fahrgastbeirat ÖPNV
+          - Fridays for Future Gruppe Erding
+      - Bewohner:innen & Pendler:innen
+          - Pendler:innen
+          - Anwohner:innen
+      - Kirchen & kirchliche Organisationen
+          - Pfarrgemeinde 
+          - Kirchliche Organisationen
+
+  - Bewertung: 2
+      - Private Mobilitätsanbieter
+          - Carsharing-Anbieter
+          - Taxiunternehmen
+      - Private Haushalte & Energieerzeugung
+          - Hauseigentümer:innen mit PV-Anlagen
+
+  - Bewertung: 1
+      - Sonstige Interessierte
+          - Allgemeine Öffentlichkeit
+          - Lokale Medien
+          - Social-Media-Gruppen

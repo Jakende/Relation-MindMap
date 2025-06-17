@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Force‐Directed Tree – Flexible Datenquelle</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    :root {
+      --palette-primary: #0074d9;
+      --palette-accent: #4fc3f7;
+      --palette-bg: #f9f9fb;
+      --palette-dark-bg: #181a1b;
+      --palette-text: #222;
+      --palette-dark-text: #f1f1f1;
+      --palette-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+      --toolbar-height: 3rem;
+    }
+    /* Layout */
+    body {
+      margin: 0;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: var(--toolbar-height) auto 1fr auto;
+      grid-template-areas:
+        "header"
+        "search"
+        "canvas"
+        "infobar";
+      font-family: 'Roboto', Arial, sans-serif;
+      background: var(--palette-bg);
+      color: var(--palette-text);
+      transition: background 0.5s, color 0.5s;
+    }
+    body.dark-mode {
+      background: var(--palette-dark-bg);
+      color: var(--palette-dark-text);
+    }
+    header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      background: var(--palette-bg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .toolbar button {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      padding: 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toolbar button:hover {
+      background: rgba(0,0,0,0.05);
+    }
+    /* Dropdowns */
+    .toolbar-dropdown {
+      position: relative;
+    }
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--palette-bg);
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    .dropdown-menu.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .dropdown-menu button {
+      display: block;
+      width: 100%;
+      padding: 0.5rem 1rem;
+      border: none;
+      background: none;
+      text-align: left;
+      cursor: pointer;
+    }
+    .dropdown-menu button:hover {
+      background: rgba(0,0,0,0.05);
+    }
+    /* Search */
+    .search-row {
+      grid-area: search;
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      background: var(--palette-bg);
+      position: sticky;
+      top: var(--toolbar-height);
+      z-index: 90;
+      gap: 0.5rem;
+    }
+    .search-row input {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    .search-row button {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      background: none;
+      cursor: pointer;
+    }
+    .search-row button:hover {
+      background: rgba(0,0,0,0.05);
+    }
+    #search-results {
+      position: absolute;
+      top: calc(var(--toolbar-height) + 3.5rem);
+      left: 1rem;
+      right: 1rem;
+      max-height: 180px;
+      overflow-y: auto;
+      background: var(--palette-bg);
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      display: none;
+      z-index: 95;
+    }
+    /* Canvas */
+    svg {
+      grid-area: canvas;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    /* Info-Bar */
+    #info-bar {
+      grid-area: infobar;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.97);
+      border-top: 1px solid #ccc;
+      font-size: 1rem;
+      position: sticky;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      transition: background 0.5s, color 0.5s;
+      opacity: 0;
+      pointer-events: none;
+    }
+    body.dark-mode #info-bar {
+      background: rgba(24,26,27,0.97);
+      border-top: 1px solid #333;
+      color: var(--palette-dark-text);
+    }
+    #info-bar.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Editor Slide-In */
+    #editor-container {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 50vw;
+      max-width: 400px;
+      height: 100%;
+      background: var(--palette-bg);
+      transform: translateX(100%);
+      transition: transform 0.3s ease-out;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+      z-index: 110;
+      display: flex;
+      flex-direction: column;
+    }
+    #editor-container.active {
+      transform: translateX(0);
+    }
+    #markdown-editor {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 1rem;
+      resize: none;
+    }
+    #close-editor {
+      border: none;
+      background: none;
+      padding: 0.75rem;
+      font-size: 1rem;
+      cursor: pointer;
+      align-self: flex-end;
+    }
+    /* Responsive */
+    @media (max-width: 600px) {
+      .search-row { display: none; }
+      .search-toggle-icon { display: inline-flex; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">MindMap</div>
+    <div class="toolbar">
+      <button id="darkmode-toggle" aria-label="Dark Mode umschalten">🌙</button>
+
+      <div class="toolbar-dropdown">
+        <button id="palette-toggle" aria-label="Farbschema auswählen">🎨</button>
+        <div class="dropdown-menu palette-menu">
+          <button data-scheme="category10">Klassisch (Standard)</button>
+          <button data-scheme="accent">Frisch & Akzentuiert</button>
+          <button data-scheme="dark2">Dunkel & Kontrastreich</button>
+          <button data-scheme="set2">Pastell & Ruhig</button>
+          <button data-scheme="greys">Graustufen</button>
+          <button data-scheme="bw">Schwarz & Weiß</button>
+          <button data-scheme="cb-friendly">Farbenblind-freundlich</button>
+        </div>
+      </div>
+
+      <div class="toolbar-dropdown">
+        <button id="export-toggle" aria-label="Exportoptionen anzeigen">⬇️</button>
+        <div class="dropdown-menu export-menu">
+          <button id="export-json">Export JSON</button>
+          <button id="export-md">Export .md</button>
+        </div>
+      </div>
+
+      <button id="import-toggle" aria-label="Datei importieren">📁</button>
+      <button id="clear-toggle" aria-label="Mindmap leeren">🗑️</button>
+      <button id="edit-toggle" aria-label="Markdown Editor anzeigen">✏️</button>
+      <button id="fullscreen-toggle" aria-label="Vollbildmodus umschalten">⛶</button>
+      <button id="search-toggle" class="search-toggle-icon" aria-label="Suche anzeigen">🔍</button>
+    </div>
+  </header>
+
+  <div class="search-row">
+    <input id="search-input" type="text" placeholder="Suche oder Frage stellen…" autocomplete="off">
+    <button id="search-btn">Suchen</button>
+    <button id="reset-btn">Zurücksetzen</button>
+    <div id="search-results" role="listbox"></div>
+  </div>
+
+  <svg></svg>
+  <div id="info-bar"></div>
+
+  <div id="editor-container">
+    <button id="close-editor">Schließen</button>
+    <textarea id="markdown-editor" placeholder="Markdown hier eingeben…"></textarea>
+  </div>
+
+  <script>
+    // --- Farbschemata & Dropdown-Logik ---
+    const paletteToggleBtn = document.getElementById('palette-toggle');
+    const paletteMenu = document.querySelector('.palette-menu');
+    paletteToggleBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      paletteMenu.classList.toggle('active');
+      exportMenu.classList.remove('active');
+    });
+
+    const exportToggleBtn = document.getElementById('export-toggle');
+    const exportMenu = document.querySelector('.export-menu');
+    exportToggleBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      exportMenu.classList.toggle('active');
+      paletteMenu.classList.remove('active');
+    });
+
+    document.addEventListener('click', () => {
+      paletteMenu.classList.remove('active');
+      exportMenu.classList.remove('active');
+    });
+
+    // --- Dark Mode ---
+    document.getElementById('darkmode-toggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+    });
+
+    // --- Search ---
+    const searchRow = document.querySelector('.search-row');
+    const searchToggle = document.getElementById('search-toggle');
+    searchToggle.addEventListener('click', () => {
+      searchRow.classList.toggle('active');
+    });
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+    const searchBtn = document.getElementById('search-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    function showSearchResults(query) {
+      if (!query) {
+        searchResults.style.display = 'none';
+        return;
+      }
+      // … (bestehende Logik aus initializeGraph übernehmen) …
+      searchResults.style.display = 'block';
+    }
+    searchInput.addEventListener('input', () => showSearchResults(searchInput.value));
+    searchBtn.addEventListener('click', () => showSearchResults(searchInput.value));
+    resetBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      searchResults.style.display = 'none';
+    });
+
+    // --- Import/Export ---
+    document.getElementById('export-json').addEventListener('click', () => {
+      // … bestehende Export-Logik …
+    });
+    document.getElementById('export-md').addEventListener('click', () => {
+      // … bestehende Export-Logik …
+    });
+    document.getElementById('import-toggle').addEventListener('click', () => {
+      document.getElementById('import-file').click();
+    });
+
+    // --- Clear ---
+    document.getElementById('clear-toggle').addEventListener('click', () => {
+      d3.select('svg').selectAll('*').remove();
+      document.getElementById('info-bar').classList.remove('active');
+      searchInput.value = '';
+      searchResults.innerHTML = '';
+      currentData = null;
+      localStorage.removeItem('mindmapData');
+    });
+
+    // --- Editor Slide-In ---
+    const editorContainer = document.getElementById('editor-container');
+    document.getElementById('edit-toggle').addEventListener('click', () => {
+      editorContainer.classList.toggle('active');
+    });
+    document.getElementById('close-editor').addEventListener('click', () => {
+      editorContainer.classList.remove('active');
+    });
+
+    // --- Fullscreen ---
+    document.getElementById('fullscreen-toggle').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+    // … Rest der D3-Force-Directed-Graph-Initialisierung und Event-Handler unverändert übernehmen …
+  </script>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="import-file" accept=".md,.json" style="display:none">
+</body>
+</html>
