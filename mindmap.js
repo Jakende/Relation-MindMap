@@ -1676,6 +1676,7 @@ window.addEventListener('DOMContentLoaded', () => {
   settingsToggle = document.getElementById('settings-toggle'); // Global
   infoToggle = document.getElementById('info-toggle'); // Global
   infoMenu = document.getElementById('info-menu'); // Global
+  minConnectionsInput = document.getElementById('min-connections');
 
   // Einstellungen aus LocalStorage anwenden
   loadAllSettings();
@@ -1933,42 +1934,30 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Cluster-Toggle (Gruppierung der Knoten) ---
-  clusterToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
+clusterToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
 
-    if (currentLayout === 'graph') {
-      clusterEnabled = !clusterEnabled;
-      clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
+  if (currentLayout === 'graph') {
+    clusterEnabled = !clusterEnabled;
+    clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
 
-      if (clusterEnabled) {
-        // Originalpositionen und Daten sichern
-        window.lastSimulation.nodes().forEach(node => {
-          originalNodePositions.set(node.id, { x: node.x, y: node.y });
-        });
-        originalGraphNodes = currentGraph.nodes.map(n => ({ ...n }));
-        originalGraphLinks = currentGraph.links.map(l => ({ ...l }));
+    if (clusterEnabled) {
+      // Originalpositionen und Daten sichern
+      window.lastSimulation.nodes().forEach(node => {
+        originalNodePositions.set(node.id, { x: node.x, y: node.y });
+      });
+      originalGraphNodes = currentGraph.nodes.map(n => ({ ...n }));
+      originalGraphLinks = currentGraph.links.map(l => ({ ...l }));
 
-        applyHierarchicalLayoutForGraphView();
-      } else {
-        resetGraphLayout();
-        if (originalGraphNodes && originalGraphLinks) {
-          loadDataAndRender({ nodes: originalGraphNodes, links: originalGraphLinks }, currentHierarchy);
-        }
-      }
+      applyHierarchicalLayoutForGraphView();
     } else {
-      // Tree-View: Tag- oder Verbindungsbasierte Gruppierung
-      clusterEnabled = !clusterEnabled;
-      clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
-
-      if (clusterEnabled) {
-        if (currentClusterMode === 'none') {
-          currentClusterMode = 'tag-based';
-          const select = document.getElementById('cluster-mode-select');
-          if (select) select.value = currentClusterMode;
-        }
-        applyCurrentClusterMode();
-      } else {
-        disableTagClustering();
+      resetGraphLayout();
+      if (originalGraphNodes && originalGraphLinks) {
+        loadDataAndRender({ nodes: originalGraphNodes, links: originalGraphLinks }, currentHierarchy);
+      }
+    }
+  } else {
+    // Tree-View: Tag- oder Verbindungsbasierte Gruppierung
     clusterEnabled = !clusterEnabled;
     clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
 
@@ -1981,10 +1970,11 @@ window.addEventListener('DOMContentLoaded', () => {
       applyCurrentClusterMode();
     } else {
       disableTagClustering();
-      if (currentLayout === 'graph') resetGraphLayout();
     }
-    saveAllSettings();
-  });
+  }
+  saveAllSettings();
+});
+
 
   // --- View Style Toggle (Tree view variations) ---
   viewStyleToggle.addEventListener('click', (e) => {
@@ -2415,7 +2405,6 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Benutzerdefinierte Cluster-Regeln (Live-Update) ---
-  minConnectionsInput = document.getElementById('min-connections');
   // Entferne den applyClusterRulesBtn, da Änderungen live angewendet werden sollen
   const applyClusterRulesBtn = document.getElementById('apply-cluster-rules');
   if (applyClusterRulesBtn) applyClusterRulesBtn.remove();
