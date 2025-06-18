@@ -2009,7 +2009,6 @@ window.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
     const hidden = searchBar.classList.toggle("is-hidden");
     searchToggle.classList.toggle("toggle-btn--active", !hidden);
-    searchToggle.classList.toggle("is-hidden", !hidden);
   });
 
 
@@ -2037,7 +2036,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!searchBar.contains(e.target) && e.target !== searchToggle) {
       searchBar.classList.add("is-hidden");
       searchToggle.classList.remove("toggle-btn--active");
-      searchToggle.classList.remove("is-hidden");
       if (searchResults) searchResults.style.display = "none";
     }
     // NEU: View Style Toggle

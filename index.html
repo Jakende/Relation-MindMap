@@ -12,6 +12,19 @@ Refactoring 2025-05-20:
   <link rel="stylesheet" href="style.css">
   <script src="https://d3js.org/d3.v7.min.js" defer onerror="this.onerror=null;var s=document.createElement('script');s.src='d3.v7.min.js';document.head.appendChild(s);"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer onerror="this.onerror=null;var s=document.createElement('script');s.src='marked.min.js';document.head.appendChild(s);"></script>
+  <script>
+    // Additional fallback if the CDN scripts were blocked entirely
+    if (!window.d3) {
+      var s = document.createElement('script');
+      s.src = 'd3.v7.min.js';
+      document.head.appendChild(s);
+    }
+    if (!window.marked) {
+      var s = document.createElement('script');
+      s.src = 'marked.min.js';
+      document.head.appendChild(s);
+    }
+  </script>
   <script src="mindmap.js" type="module" defer></script>
   <style>
     /* Nur noch Styles, die dynamisch generiert werden müssen oder als Fallback dienen. */
