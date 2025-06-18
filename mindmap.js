@@ -1969,7 +1969,19 @@ window.addEventListener('DOMContentLoaded', () => {
         applyCurrentClusterMode();
       } else {
         disableTagClustering();
+    clusterEnabled = !clusterEnabled;
+    clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
+
+    if (clusterEnabled) {
+      if (currentClusterMode === 'none') {
+        currentClusterMode = 'tag-based';
+        const select = document.getElementById('cluster-mode-select');
+        if (select) select.value = currentClusterMode;
       }
+      applyCurrentClusterMode();
+    } else {
+      disableTagClustering();
+      if (currentLayout === 'graph') resetGraphLayout();
     }
     saveAllSettings();
   });

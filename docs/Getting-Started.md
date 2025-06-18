@@ -5,6 +5,8 @@ Open `index.html` in any modern web browser (Chrome, Firefox, Edge, Safari).
 The application loads D3.js and marked from a CDN, but if the network request
 fails it falls back to the bundled files `d3.v7.min.js` and `marked.min.js`.
 If your browser blocks direct file access, start a small web server:
+The page fetches D3.js and marked from a CDN with local fallbacks. If you see
+errors due to browser restrictions, start a small web server:
 
 ```bash
 python -m http.server

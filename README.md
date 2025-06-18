@@ -19,6 +19,8 @@ For a comprehensive overview of all features and functions, refer to [`memory-ba
 1. **Open the Application**: Simply open `index.html` in any modern web browser. The page attempts to load D3.js and marked from a CDN.
    If network access is blocked, the bundled fallback files `d3.v7.min.js` and `marked.min.js` are loaded instead.
    If your browser restricts direct file access, start a tiny web server with `python -m http.server` and open `http://localhost:8000`.
+1. **Open the Application**: Simply open `index.html` in any modern web browser. The page normally loads D3.js and marked from a CDN. If the CDN is unavailable, local fallback files are used.
+   If your browser restricts direct file access, you can start a tiny web server with `python -m http.server` and open `http://localhost:8000`.
 
    ```bash
    ./index.html
