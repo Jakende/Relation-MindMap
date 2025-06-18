@@ -1714,6 +1714,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showAllTexts = !showAllTexts;
     showAllToggle.classList.toggle('toggle-btn--active', showAllTexts);
     const svg = d3.select('svg');
+    const g = svg.select('g'); // Dynamically select current group element
     svg.selectAll('.node text').style('opacity', showAllTexts ? 1 : 0);
     // Nach showAllTexts ggf. auch:
     g.selectAll('.link-label').style('font-size', (graphSettings.nodeTextSize - 2) + 'px'); // NEU
