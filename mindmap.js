@@ -1853,7 +1853,6 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Cluster-Toggle (Gruppierung der Knoten) ---
-  const clusterToggle = document.getElementById('cluster-toggle');
   clusterToggle.addEventListener('click', (e) => {
     e.stopPropagation();
     
