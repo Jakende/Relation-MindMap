@@ -1807,7 +1807,6 @@ window.addEventListener('DOMContentLoaded', () => {
     darkToggle.classList.toggle('toggle-btn--active', body.classList.contains('dark-mode'));
   });
   // --- Relations-Toggle (optional, falls vorhanden) ---
-  const relationsToggle = document.getElementById('relations-toggle');
   if (relationsToggle) {
     relationsToggle.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1853,7 +1852,6 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Cluster-Toggle (Gruppierung der Knoten) ---
-  const clusterToggle = document.getElementById('cluster-toggle');
   clusterToggle.addEventListener('click', (e) => {
     e.stopPropagation();
     
