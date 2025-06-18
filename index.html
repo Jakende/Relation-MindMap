@@ -26,6 +26,15 @@ Refactoring 2025-05-20:
     <button id="clear-toggle" class="toggle-btn" title="Mindmap leeren" aria-label="Mindmap leeren">🗑️</button>
     <button id="graphmode-toggle" class="toggle-btn" title="Graph/Tree Layout umschalten" aria-label="Graph/Tree Layout umschalten">🔄</button>
     <button id="sticky-nodes-toggle" class="toggle-btn" title="Knoten-Fixierung an/aus">🔒</button> <!-- NEU -->
+    <button id="cluster-toggle" class="toggle-btn" title="Cluster-Gruppierung" aria-label="Cluster-Gruppierung"></button>
+    <div id="view-style-toggle" class="toggle-btn" title="Ansichtsstil wählen" aria-label="Ansichtsstil wählen">
+      <span>Ansicht</span>
+      <div id="view-style-menu" class="dropdown-menu glass-surface is-hidden">
+        <button class="dropdown-item" data-style="default">Standard</button>
+        <button class="dropdown-item" data-style="compact">Kompakt</button>
+        <button class="dropdown-item" data-style="highlight">Hervorheben</button>
+      </div>
+    </div>
     <button id="relations-toggle" class="toggle-btn" title="Relationen anzeigen/ausblenden" aria-label="Relationen anzeigen/ausblenden"><span class="icon">🔗</span></button>
 
     <!-- Footer: Bottom right group -->
@@ -97,6 +106,18 @@ Refactoring 2025-05-20:
     <div class="settings-slider-group">
       <label for="slider-nodetextsize">Knoten-Textgröße: <span id="label-nodetextsize">15</span> px</label>
       <input type="range" min="8" max="32" step="1" value="15" id="slider-nodetextsize">
+    </div>
+    <div id="cluster-mode-selection" class="settings-slider-group">
+      <label for="cluster-mode-select">Cluster-Modus:</label>
+      <select id="cluster-mode-select">
+        <option value="none">Keine</option>
+        <option value="tag-based">Tag-basiert</option>
+        <option value="connection-based">Verbindungs-basiert</option>
+      </select>
+    </div>
+    <div id="cluster-rules-menu" class="settings-slider-group">
+      <label for="min-connections">Min. Verbindungen pro Cluster:</label>
+      <input type="number" id="min-connections" value="3" min="1">
     </div>
     <button id="close-settings" class="settings-close-btn">Schließen</button>
   </div>
