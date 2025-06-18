@@ -1353,20 +1353,20 @@ function loadAllSettings() {
     const settings = JSON.parse(saved);
 
     // TreeView-Stil
-    currentTreeViewStyle = settings.treeViewStyle || 'default';
+    currentTreeViewStyle = settings.treeViewStyle ?? 'default';
     // graphSettings
-    Object.assign(graphSettings, settings.graphSettings || {});
+    Object.assign(graphSettings, settings.graphSettings ?? {});
     // Farbschema
-    currentScheme = settings.colorScheme || 'category10';
+    currentScheme = settings.colorScheme ?? 'category10';
     // showAllTexts
-    showAllTexts = settings.showAllTexts || false;
+    showAllTexts = settings.showAllTexts ?? false;
     // stickyNodesEnabled
-    stickyNodesEnabled = settings.stickyNodesEnabled || true;
+    stickyNodesEnabled = settings.stickyNodesEnabled ?? true;
     // showRelationLabels
-    window.showRelationLabels = settings.showRelationLabels || false;
+    window.showRelationLabels = settings.showRelationLabels ?? false;
     // Cluster-Einstellungen
-    clusterEnabled = settings.clusterEnabled || false;
-    currentClusterMode = settings.clusterMode || 'none';
+    clusterEnabled = settings.clusterEnabled ?? false;
+    currentClusterMode = settings.clusterMode ?? 'none';
 
     // UI-Elemente aktualisieren
     loadSettingsToSliders(); // Slider-Werte setzen
