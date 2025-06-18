@@ -9,7 +9,7 @@ The page fetches D3.js and marked from a CDN with local fallbacks. If you see
 errors due to browser restrictions, start a small web server:
 
 ```bash
-python -m http.server
+python3 -m http.server
 ```
 and open `http://localhost:8000` in your browser.
 
