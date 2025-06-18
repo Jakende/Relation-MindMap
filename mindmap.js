@@ -36,6 +36,7 @@ let infoMenu;
 let paletteMenu;
 let exportBar;
 let body;
+let minConnectionsInput;
 
 const colorSchemes = {
   category10: d3.schemeCategory10,
@@ -718,16 +719,26 @@ function parseTags(nodeId) {
 }
 
 // NEU: Cluster-Gruppierung für TreeView (Tag-basiert)
-function applyTagClustering() {
+function applyTagClustering(minConnections = 0) {
   if (!window.lastSimulation) return;
 
   const simulation = window.lastSimulation;
   const nodes = simulation.nodes();
+  const links = simulation.links();
   const g = d3.select("svg").select("g");
+
+  // Verbindungsanzahl pro Knoten ermitteln
+  const connectionCounts = new Map();
+  nodes.forEach(node => connectionCounts.set(node.id, 0));
+  links.forEach(link => {
+    connectionCounts.set(link.source.id, connectionCounts.get(link.source.id) + 1);
+    connectionCounts.set(link.target.id, connectionCounts.get(link.target.id) + 1);
+  });
 
   // 1. Knoten nach Tags gruppieren
   const tagClusters = new Map(); // Map: Tag -> [nodes]
   nodes.forEach(node => {
+    if ((connectionCounts.get(node.id) || 0) < minConnections) return;
     const tags = node.data.tags;
     if (tags.length === 0) {
       // Knoten ohne Tags in "Ungegruppert" Cluster
@@ -1014,7 +1025,7 @@ function toggleTreeViewStyle(styleClass) {
       // Bei "Standard" oder "Kompakt" Cluster-Status beibehalten
       // (falls zuvor aktiviert, bleibt es aktiv)
       if (clusterEnabled) {
-        applyTagClustering();
+        applyTagClustering(+minConnectionsInput.value);
       } else {
         disableTagClustering();
       }
@@ -1832,7 +1843,7 @@ window.addEventListener('DOMContentLoaded', () => {
       clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
 
       if (clusterEnabled) {
-        applyTagClustering();
+        applyTagClustering(+minConnectionsInput.value);
       } else {
         disableTagClustering();
       }
@@ -2255,7 +2266,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Benutzerdefinierte Cluster-Regeln (Live-Update) ---
-  const minConnectionsInput = document.getElementById('min-connections');
+  minConnectionsInput = document.getElementById('min-connections');
   // Entferne den applyClusterRulesBtn, da Änderungen live angewendet werden sollen
   const applyClusterRulesBtn = document.getElementById('apply-cluster-rules');
   if (applyClusterRulesBtn) applyClusterRulesBtn.remove();
@@ -2264,7 +2275,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const minConnections = +minConnectionsInput.value;
     if (currentLayout === 'tree') {
       // Im Tree-View: Tag-basierte Gruppierung mit dynamischer Adaptierung
-      applyTagClustering(minConnections); // Hier könnte man minConnections an applyTagClustering übergeben
+      applyTagClustering(minConnections);
     } else {
       // Im Graph-View: Dynamische Cluster-Adaptierung
       dynamicClusterAdaptation(minConnections);
@@ -2279,7 +2290,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     if (selectedMode === 'tag-based') {
       clusterEnabled = true;
-      applyTagClustering();
+      applyTagClustering(+minConnectionsInput.value);
     } else if (selectedMode === 'connection-based') {
       clusterEnabled = true;
       dynamicClusterAdaptation(+minConnectionsInput.value);
