@@ -1676,6 +1676,7 @@ window.addEventListener('DOMContentLoaded', () => {
   settingsToggle = document.getElementById('settings-toggle'); // Global
   infoToggle = document.getElementById('info-toggle'); // Global
   infoMenu = document.getElementById('info-menu'); // Global
+  minConnectionsInput = document.getElementById('min-connections');
 
   // Einstellungen aus LocalStorage anwenden
   loadAllSettings();
@@ -2404,7 +2405,6 @@ clusterToggle.addEventListener('click', (e) => {
   });
 
   // --- Benutzerdefinierte Cluster-Regeln (Live-Update) ---
-  minConnectionsInput = document.getElementById('min-connections');
   // Entferne den applyClusterRulesBtn, da Änderungen live angewendet werden sollen
   const applyClusterRulesBtn = document.getElementById('apply-cluster-rules');
   if (applyClusterRulesBtn) applyClusterRulesBtn.remove();
