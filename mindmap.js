@@ -1935,6 +1935,40 @@ window.addEventListener('DOMContentLoaded', () => {
   // --- Cluster-Toggle (Gruppierung der Knoten) ---
   clusterToggle.addEventListener('click', (e) => {
     e.stopPropagation();
+
+    if (currentLayout === 'graph') {
+      clusterEnabled = !clusterEnabled;
+      clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
+
+      if (clusterEnabled) {
+        // Originalpositionen und Daten sichern
+        window.lastSimulation.nodes().forEach(node => {
+          originalNodePositions.set(node.id, { x: node.x, y: node.y });
+        });
+        originalGraphNodes = currentGraph.nodes.map(n => ({ ...n }));
+        originalGraphLinks = currentGraph.links.map(l => ({ ...l }));
+
+        applyHierarchicalLayoutForGraphView();
+      } else {
+        resetGraphLayout();
+        if (originalGraphNodes && originalGraphLinks) {
+          loadDataAndRender({ nodes: originalGraphNodes, links: originalGraphLinks }, currentHierarchy);
+        }
+      }
+    } else {
+      // Tree-View: Tag- oder Verbindungsbasierte Gruppierung
+      clusterEnabled = !clusterEnabled;
+      clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
+
+      if (clusterEnabled) {
+        if (currentClusterMode === 'none') {
+          currentClusterMode = 'tag-based';
+          const select = document.getElementById('cluster-mode-select');
+          if (select) select.value = currentClusterMode;
+        }
+        applyCurrentClusterMode();
+      } else {
+        disableTagClustering();
     clusterEnabled = !clusterEnabled;
     clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
 
