@@ -151,6 +151,18 @@ body.dark-mode, html.dark-mode {
     position: static;
     margin: 0;
   }
+  /* Keep auxiliary buttons spaced from the main control bar */
+  #search-toggle {
+    top: 10px;
+    left: 10px;
+    right: auto;
+  }
+  #info-toggle {
+    top: 70px;
+    left: 10px;
+    right: auto;
+    bottom: auto;
+  }
 }
 
 /* Ensure all toggle buttons are visually consistent */
