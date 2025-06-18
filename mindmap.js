@@ -923,7 +923,8 @@ function dynamicClusterAdaptation(minConnections = 3) {
   g.selectAll(".cluster-rect").remove();
   g.selectAll(".cluster-label").remove();
 
-  const clusterColors = d3.scaleOrdinal(d3.schemePaired); // Farbpalette für Cluster
+  // Verwende eine moderne Farbpalette aus d3-scale-chromatic
+  const clusterColors = d3.scaleOrdinal(d3.schemeTableau10); // Farbpalette für Cluster
 
   const clusterData = [];
   dynamicClusters.forEach((clusterNodes, clusterId) => {
