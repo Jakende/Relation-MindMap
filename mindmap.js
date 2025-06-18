@@ -474,6 +474,7 @@ function initializeTree(data) {
       const targetNode = findTargetNode(event.x, event.y, nodes, d); // Hilfsfunktion
       if (targetNode && currentClusterMode === 'manual' && clusterEnabled) {
         d.manualGroup = targetNode.manualGroup || targetNode.id;
+        d.clusterId = d.manualGroup;
         applyManualClustering();
       }
 
@@ -797,6 +798,8 @@ function applyTagClustering(minConnections = 0) {
       centerY: centerY,
       rect: { x: rectX, y: rectY, width: rectWidth, height: rectHeight }
     });
+    // mark nodes with this cluster id
+    clusterNodes.forEach(n => { n.clusterId = tag; });
   });
 
   // Zeichne Cluster-Rechtecke und Labels
@@ -825,7 +828,7 @@ function applyTagClustering(minConnections = 0) {
   // 3. Simulation anpassen, um Cluster zu berücksichtigen
   // Füge eine Kraft hinzu, die Knoten zu ihrem Cluster-Zentrum zieht
   simulation.force("cluster", forceCluster()
-    .centers(clusterData.map(c => ({ x: c.centerX, y: c.centerY, tag: c.tag })))
+    .centers(clusterData.map(c => ({ x: c.centerX, y: c.centerY, id: c.tag })))
     .strength(0.1) // Stärke der Anziehung zum Cluster-Zentrum
   );
 
@@ -836,7 +839,7 @@ function applyTagClustering(minConnections = 0) {
 }
 
 // Hilfsfunktion für die Cluster-Kraft
-function forceCluster() {
+function forceCluster(getIdFn = d => d.clusterId) {
   let nodes;
   let centers;
   let strength = 0.1;
@@ -846,20 +849,9 @@ function forceCluster() {
 
     for (let i = 0, n = nodes.length; i < n; ++i) {
       const node = nodes[i];
-      const nodeTags = node.data.tags;
-      
-      // Finde das passende Cluster-Zentrum für den Knoten
-      let targetCenter = null;
-      if (nodeTags.length === 0) {
-        targetCenter = centers.find(c => c.tag === "Ungegruppert");
-      } else {
-        // Finde das erste passende Zentrum (oder den Durchschnitt, wenn mehrere Tags)
-        for (let j = 0; j < nodeTags.length; ++j) {
-          targetCenter = centers.find(c => c.tag === nodeTags[j]);
-          if (targetCenter) break;
-        }
-      }
-
+      const cid = getIdFn(node);
+      if (cid == null) continue;
+      const targetCenter = centers.find(c => c.id === cid);
       if (targetCenter) {
         node.vx -= (node.x - targetCenter.x) * strength * alpha;
         node.vy -= (node.y - targetCenter.y) * strength * alpha;
@@ -958,6 +950,7 @@ function dynamicClusterAdaptation(minConnections = 3) {
       centerY: centerY,
       rect: { x: rectX, y: rectY, width: rectWidth, height: rectHeight }
     });
+    clusterNodes.forEach(n => { n.clusterId = clusterId; });
   });
 
   // Zeichne Cluster-Rechtecke und Labels
@@ -1039,6 +1032,7 @@ function applyManualClustering() {
       centerY,
       rect: { x: rectX, y: rectY, width: rectWidth, height: rectHeight }
     });
+    clusterNodes.forEach(n => { n.clusterId = groupId; });
   });
 
   clusterData.forEach(cluster => {
@@ -1080,6 +1074,7 @@ function disableTagClustering() {
   // Simulation neu starten, um Knoten in ihren ursprünglichen Zustand zu versetzen
   if (window.lastSimulation) {
     const sim = window.lastSimulation;
+    sim.nodes().forEach(n => { delete n.clusterId; delete n.manualGroup; });
     sim.force('cluster', null);
     sim.force('dynamicCluster', null);
     sim.force('manualCluster', null);
@@ -1254,6 +1249,7 @@ function initializeForceGraph(data) {
       const targetNode = findTargetNode(event.x, event.y, nodes, d); // Hilfsfunktion
       if (targetNode && currentClusterMode === 'manual' && clusterEnabled) {
         d.manualGroup = targetNode.manualGroup || targetNode.id;
+        d.clusterId = d.manualGroup;
         applyManualClustering();
       }
 
