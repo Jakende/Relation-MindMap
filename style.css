@@ -93,6 +93,12 @@ body.dark-mode, html.dark-mode {
   color: #fff;
   box-shadow: 0 0 0 2px var(--accent, #4a90e2)33;
 }
+
+/* Disabled state for toggle buttons */
+.toggle-btn--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 .toggle-btn--relations { bottom: 156px; }
 .toggle-btn--palette   { bottom: 248px; }
 .toggle-btn--darkmode  { bottom: 294px; }
