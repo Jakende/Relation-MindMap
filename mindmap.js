@@ -2211,8 +2211,6 @@ window.addEventListener('DOMContentLoaded', () => {
   updateSliderLabels();
 
   // --- Info-Button & Info-Menü ---
-  const infoToggle = document.getElementById('info-toggle');
-  const infoMenu = document.getElementById('info-menu');
   const closeInfoMenu = document.getElementById('close-info-menu');
   const infoMenuList = document.getElementById('info-menu-list');
   const infoMenuMdContent = document.getElementById('info-menu-md-content');
