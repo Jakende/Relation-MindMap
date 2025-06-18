@@ -16,7 +16,8 @@ For a comprehensive overview of all features and functions, refer to [`memory-ba
 
 ## Getting Started
 
-1. **Open the Application**: Simply open `index.html` in any modern web browser. All necessary dependencies are loaded via CDN, eliminating the need for a build step or server.
+1. **Open the Application**: Simply open `index.html` in any modern web browser. The page normally loads D3.js and marked from a CDN. If the CDN is unavailable, local fallback files are used.
+   If your browser restricts direct file access, you can start a tiny web server with `python -m http.server` and open `http://localhost:8000`.
 
    ```bash
    ./index.html

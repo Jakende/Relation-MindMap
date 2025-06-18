@@ -1,7 +1,14 @@
 # Getting Started with Relation-MindMap
 
 ## 1. Launch the Application
-Open `index.html` in any modern web browser (Chrome, Firefox, Edge, Safari)
+Open `index.html` in any modern web browser (Chrome, Firefox, Edge, Safari).
+The page fetches D3.js and marked from a CDN with local fallbacks. If you see
+errors due to browser restrictions, start a small web server:
+
+```bash
+python -m http.server
+```
+and open `http://localhost:8000` in your browser.
 
 ## 2. Explore the Interface
 1. **Mind Map Canvas**: Central area for visualization

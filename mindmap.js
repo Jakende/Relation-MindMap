@@ -472,10 +472,9 @@ function initializeTree(data) {
       // Manuelle Gruppierung logik hier einfügen (z.B. Knoten an Zielposition fixieren)
       // Beispiel: Wenn ein Knoten auf einen anderen Knoten gezogen wird, gruppiere sie
       const targetNode = findTargetNode(event.x, event.y, nodes, d); // Hilfsfunktion
-      if (targetNode) {
-        console.log(`Knoten ${d.data.name} wurde auf Knoten ${targetNode.data.name} gezogen.`);
-        // Hier könnte die Logik für die manuelle Gruppierung stehen
-        // z.B. d.group = targetNode.group; oder eine neue Relation erstellen
+      if (targetNode && currentClusterMode === 'manual' && clusterEnabled) {
+        d.manualGroup = targetNode.manualGroup || targetNode.id;
+        applyManualClustering();
       }
 
       // Nur lösen, wenn Fixierung AUS ist
@@ -692,8 +691,9 @@ function updateSimulationSettings() {
   });
 
   // Aktualisiere die Kräfte der Simulation
-  if (simulation.links) { // Sicherstellen, dass links existieren
-    simulation.force("link", d3.forceLink(simulation.links()).id(d => d.id || d.index).distance(graphSettings.linkDistance).strength(1));
+  const linkForce = simulation.force('link');
+  if (linkForce) {
+    linkForce.distance(graphSettings.linkDistance);
   }
   simulation
     .force("charge", d3.forceManyBody().strength(-220)) // Oder den ursprünglichen Wert
@@ -992,15 +992,98 @@ function dynamicClusterAdaptation(minConnections = 3) {
   simulation.alpha(1).restart();
 }
 
+// Manual clustering via drag & drop
+function applyManualClustering() {
+  if (!window.lastSimulation) return;
+
+  const simulation = window.lastSimulation;
+  const nodes = simulation.nodes();
+  const g = d3.select('svg').select('g');
+
+  const groups = new Map();
+  nodes.forEach(node => {
+    if (node.manualGroup) {
+      if (!groups.has(node.manualGroup)) groups.set(node.manualGroup, []);
+      groups.get(node.manualGroup).push(node);
+    }
+  });
+
+  g.selectAll('.cluster-rect').remove();
+  g.selectAll('.cluster-label').remove();
+
+  const clusterColors = d3.scaleOrdinal(d3.schemeSet2);
+  const clusterData = [];
+  groups.forEach((clusterNodes, groupId) => {
+    if (clusterNodes.length < 2) return; // ignore single nodes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let centerX = 0, centerY = 0;
+    clusterNodes.forEach(node => {
+      minX = Math.min(minX, node.x - node.r);
+      minY = Math.min(minY, node.y - node.r);
+      maxX = Math.max(maxX, node.x + node.r);
+      maxY = Math.max(maxY, node.y + node.r);
+      centerX += node.x;
+      centerY += node.y;
+    });
+    centerX /= clusterNodes.length;
+    centerY /= clusterNodes.length;
+    const padding = 20;
+    const rectX = minX - padding;
+    const rectY = minY - padding;
+    const rectWidth = maxX - minX + 2 * padding;
+    const rectHeight = maxY - minY + 2 * padding;
+    clusterData.push({
+      id: groupId,
+      nodes: clusterNodes,
+      centerX,
+      centerY,
+      rect: { x: rectX, y: rectY, width: rectWidth, height: rectHeight }
+    });
+  });
+
+  clusterData.forEach(cluster => {
+    g.insert('rect', ':first-child')
+      .attr('class', 'cluster-rect')
+      .attr('x', cluster.rect.x)
+      .attr('y', cluster.rect.y)
+      .attr('width', cluster.rect.width)
+      .attr('height', cluster.rect.height)
+      .attr('fill', clusterColors(cluster.id))
+      .attr('opacity', 0.2)
+      .attr('rx', 10)
+      .attr('ry', 10);
+
+    g.append('text')
+      .attr('class', 'cluster-label')
+      .attr('x', cluster.rect.x + cluster.rect.width / 2)
+      .attr('y', cluster.rect.y + 15)
+      .attr('text-anchor', 'middle')
+      .attr('fill', clusterColors(cluster.id))
+      .attr('font-weight', 'bold')
+      .text('Gruppe');
+  });
+
+  simulation.force('manualCluster', forceCluster()
+    .centers(clusterData.map(c => ({ x: c.centerX, y: c.centerY, id: c.id })))
+    .strength(0.05)
+  );
+
+  simulation.alpha(1).restart();
+}
+
 // NEU: Cluster-Gruppierung für TreeView aufheben
 function disableTagClustering() {
   const g = d3.select("svg").select("g");
   g.selectAll(".cluster-rect").remove();
   g.selectAll(".cluster-label").remove();
-  
+
   // Simulation neu starten, um Knoten in ihren ursprünglichen Zustand zu versetzen
   if (window.lastSimulation) {
-    window.lastSimulation.alpha(1).restart();
+    const sim = window.lastSimulation;
+    sim.force('cluster', null);
+    sim.force('dynamicCluster', null);
+    sim.force('manualCluster', null);
+    sim.alpha(1).restart();
   }
 }
 
@@ -1019,6 +1102,8 @@ function applyCurrentClusterMode() {
     applyTagClustering();
   } else if (currentClusterMode === 'connection-based') {
     dynamicClusterAdaptation(minConnections);
+  } else if (currentClusterMode === 'manual') {
+    applyManualClustering();
   }
 }
 
@@ -1167,10 +1252,9 @@ function initializeForceGraph(data) {
       // Manuelle Gruppierung logik hier einfügen (z.B. Knoten an Zielposition fixieren)
       // Beispiel: Wenn ein Knoten auf einen anderen Knoten gezogen wird, gruppiere sie
       const targetNode = findTargetNode(event.x, event.y, nodes, d); // Hilfsfunktion
-      if (targetNode) {
-        console.log(`Knoten ${d.id} wurde auf Knoten ${targetNode.id} gezogen.`);
-        // Hier könnte die Logik für die manuelle Gruppierung stehen
-        // z.B. d.group = targetNode.group; oder eine neue Relation erstellen
+      if (targetNode && currentClusterMode === 'manual' && clusterEnabled) {
+        d.manualGroup = targetNode.manualGroup || targetNode.id;
+        applyManualClustering();
       }
 
       // Nur lösen, wenn Fixierung AUS ist
@@ -1855,40 +1939,35 @@ window.addEventListener('DOMContentLoaded', () => {
   // --- Cluster-Toggle (Gruppierung der Knoten) ---
   clusterToggle.addEventListener('click', (e) => {
     e.stopPropagation();
-    
-    if (currentLayout === 'graph') {
-      clusterEnabled = !clusterEnabled;
-      clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
+    clusterEnabled = !clusterEnabled;
+    clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
 
-      if (clusterEnabled) {
-        // Speichere Originalpositionen der Knoten
-        window.lastSimulation.nodes().forEach(node => {
-          originalNodePositions.set(node.id, {x: node.x, y: node.y});
-        });
-        // Speichere die aktuellen Graphen-Daten
-        originalGraphNodes = currentGraph.nodes.map(n => ({...n}));
-        originalGraphLinks = currentGraph.links.map(l => ({...l}));
-
-        applyHierarchicalLayoutForGraphView();
-      } else {
-        resetGraphLayout();
-        // Lade die ursprünglichen Graphen-Daten und rendere neu
-        if (originalGraphNodes && originalGraphLinks) {
-          loadDataAndRender({nodes: originalGraphNodes, links: originalGraphLinks}, currentHierarchy);
-        }
-      }
-    } else { // currentLayout === 'tree'
-      // Im Tree-View: Cluster-Funktion (Tag-basiert)
-      clusterEnabled = !clusterEnabled; // Zustand des Buttons ändern
-      clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
-
-      if (clusterEnabled) {
-        applyTagClustering(+minConnectionsInput.value);
-      } else {
-        disableTagClustering();
-      }
+    if (clusterEnabled) {
+      applyCurrentClusterMode();
+    } else {
+      disableTagClustering();
+      if (currentLayout === 'graph') resetGraphLayout();
     }
     saveAllSettings();
+  });
+
+  // --- View Style Toggle (Tree view variations) ---
+  viewStyleToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    viewStyleMenu.classList.toggle('is-hidden');
+    viewStyleToggle.classList.toggle('toggle-btn--active', !viewStyleMenu.classList.contains('is-hidden'));
+    paletteMenu.classList.add('is-hidden');
+    paletteToggle.classList.remove('toggle-btn--active');
+    exportBar.classList.add('is-hidden');
+    exportToggle.classList.remove('toggle-btn--active');
+  });
+  viewStyleMenu.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const style = item.getAttribute('data-style');
+      toggleTreeViewStyle(style);
+      viewStyleMenu.classList.add('is-hidden');
+      viewStyleToggle.classList.remove('toggle-btn--active');
+    });
   });
   // --- Search-Button ---
   searchToggle.addEventListener("click", (e) => {
@@ -2332,6 +2411,9 @@ window.addEventListener('DOMContentLoaded', () => {
     } else if (selectedMode === 'connection-based') {
       clusterEnabled = true;
       dynamicClusterAdaptation(+minConnectionsInput.value);
+    } else if (selectedMode === 'manual') {
+      clusterEnabled = true;
+      applyManualClustering();
     } else { // 'none'
       disableTagClustering(); // Deaktiviert auch dynamische Cluster
     }
