@@ -10,8 +10,8 @@ Refactoring 2025-05-20:
   <meta charset="utf-8">
   <title>mind - mapping</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://d3js.org/d3.v7.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+  <script src="https://d3js.org/d3.v7.min.js" defer onerror="this.onerror=null;var s=document.createElement('script');s.src='d3.v7.min.js';document.head.appendChild(s);"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer onerror="this.onerror=null;var s=document.createElement('script');s.src='marked.min.js';document.head.appendChild(s);"></script>
   <script src="mindmap.js" type="module" defer></script>
   <style>
     /* Nur noch Styles, die dynamisch generiert werden müssen oder als Fallback dienen. */
@@ -113,6 +113,7 @@ Refactoring 2025-05-20:
         <option value="none">Keine</option>
         <option value="tag-based">Tag-basiert</option>
         <option value="connection-based">Verbindungs-basiert</option>
+        <option value="manual">Manuell (Drag &amp; Drop)</option>
       </select>
     </div>
     <div id="cluster-rules-menu" class="settings-slider-group">
