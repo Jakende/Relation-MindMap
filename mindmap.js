@@ -1939,6 +1939,11 @@ window.addEventListener('DOMContentLoaded', () => {
     clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
 
     if (clusterEnabled) {
+      if (currentClusterMode === 'none') {
+        currentClusterMode = 'tag-based';
+        const select = document.getElementById('cluster-mode-select');
+        if (select) select.value = currentClusterMode;
+      }
       applyCurrentClusterMode();
     } else {
       disableTagClustering();
@@ -2413,6 +2418,8 @@ window.addEventListener('DOMContentLoaded', () => {
     } else { // 'none'
       disableTagClustering(); // Deaktiviert auch dynamische Cluster
     }
+    const btn = document.getElementById('cluster-toggle');
+    if (btn) btn.classList.toggle('toggle-btn--active', clusterEnabled);
     saveAllSettings(); // Speichere den neuen Cluster-Modus
   });
 });
