@@ -8,6 +8,7 @@ let currentGraph = null;      // Graph-Objekt für Graph-View
 let currentHierarchy = null;  // Hierarchie-Objekt für Tree-View
 let stickyNodesEnabled = true; // Standardmäßig ist Fixierung aktiv
 let clusterEnabled = false;    // NEU: Cluster-Modus deaktiviert
+let currentClusterMode = 'none'; // NEU: Gewählter Cluster-Modus
 let totalEnabled = false;      // Total-Modus deaktiviert
 let fixedNodes = [];          // Array to track fixed nodes
 let originalGraphNodes = null; // NEU: Originale Knoten für GraphView
@@ -1002,6 +1003,24 @@ function disableTagClustering() {
   }
 }
 
+// NEU: angewandten Cluster-Modus laden
+function applyCurrentClusterMode() {
+  const minConnectionsInput = document.getElementById('min-connections');
+  const minConnections = +minConnectionsInput?.value || 3;
+
+  if (!clusterEnabled || currentClusterMode === 'none') {
+    disableTagClustering();
+    if (currentLayout === 'graph') resetGraphLayout();
+    return;
+  }
+
+  if (currentClusterMode === 'tag-based') {
+    applyTagClustering();
+  } else if (currentClusterMode === 'connection-based') {
+    dynamicClusterAdaptation(minConnections);
+  }
+}
+
 // NEU: TreeView-Stil umschalten
 function toggleTreeViewStyle(styleClass) {
   const svg = d3.select('svg');
@@ -1320,7 +1339,9 @@ function saveAllSettings() {
     colorScheme: currentScheme,
     showAllTexts: showAllTexts,
     stickyNodesEnabled: stickyNodesEnabled,
-    showRelationLabels: window.showRelationLabels || false // Sicherstellen, dass es definiert ist
+    showRelationLabels: window.showRelationLabels || false, // Sicherstellen, dass es definiert ist
+    clusterEnabled: clusterEnabled,
+    clusterMode: currentClusterMode
   };
   localStorage.setItem('mindmapSettings', JSON.stringify(settings));
 }
@@ -1343,6 +1364,9 @@ function loadAllSettings() {
     stickyNodesEnabled = settings.stickyNodesEnabled || true;
     // showRelationLabels
     window.showRelationLabels = settings.showRelationLabels || false;
+    // Cluster-Einstellungen
+    clusterEnabled = settings.clusterEnabled || false;
+    currentClusterMode = settings.clusterMode || 'none';
 
     // UI-Elemente aktualisieren
     loadSettingsToSliders(); // Slider-Werte setzen
@@ -1352,6 +1376,14 @@ function loadAllSettings() {
     const relationsToggle = document.getElementById('relations-toggle');
     if (relationsToggle) {
       relationsToggle.classList.toggle('toggle-btn--active', window.showRelationLabels);
+    }
+    const clusterToggleBtn = document.getElementById('cluster-toggle');
+    if (clusterToggleBtn) {
+      clusterToggleBtn.classList.toggle('toggle-btn--active', clusterEnabled);
+    }
+    const clusterSelect = document.getElementById('cluster-mode-select');
+    if (clusterSelect) {
+      clusterSelect.value = currentClusterMode;
     }
     // Initialen TreeView-Stil anwenden
     toggleTreeViewStyle(currentTreeViewStyle);
@@ -1444,6 +1476,9 @@ function loadCurrentData() {
         setTimeout(() => {
           centerGraphOrTree();
           d3.select('svg').style('opacity', 1);
+          if (clusterEnabled && currentClusterMode !== 'none') {
+            applyCurrentClusterMode();
+          }
         }, 100);
       } else {
         // Nur Graph vorhanden: Hierarchie aus 'leitet'-Kanten rekonstruieren
@@ -1451,6 +1486,9 @@ function loadCurrentData() {
         setTimeout(() => {
           centerGraphOrTree();
           d3.select('svg').style('opacity', 1);
+          if (clusterEnabled && currentClusterMode !== 'none') {
+            applyCurrentClusterMode();
+          }
         }, 100);
       }
     } catch (e) {
@@ -1557,6 +1595,9 @@ window.addEventListener('DOMContentLoaded', () => {
   settingsToggle = document.getElementById('settings-toggle'); // Global
   infoToggle = document.getElementById('info-toggle'); // Global
   infoMenu = document.getElementById('info-menu'); // Global
+
+  // Einstellungen aus LocalStorage anwenden
+  loadAllSettings();
 
   // --- Export-Button ---
   exportToggle.addEventListener('click', (e) => {
@@ -1848,6 +1889,7 @@ window.addEventListener('DOMContentLoaded', () => {
         disableTagClustering();
       }
     }
+    saveAllSettings();
   });
   // --- Search-Button ---
   searchToggle.addEventListener("click", (e) => {
@@ -2284,6 +2326,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const clusterModeSelect = document.getElementById('cluster-mode-select');
   clusterModeSelect.addEventListener('change', () => {
     const selectedMode = clusterModeSelect.value;
+    currentClusterMode = selectedMode;
     clusterEnabled = false; // Zuerst alle Cluster deaktivieren
 
     if (selectedMode === 'tag-based') {
