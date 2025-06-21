@@ -406,6 +406,7 @@ body.dark-mode .palette-btn:hover, body.dark-mode .export-btn:hover {
   width: 480px; max-width: 98vw;
   box-shadow: var(--glass-shadow);
   border-radius: var(--glass-radius);
+  z-index: 1000;
 }
 body.dark-mode #search-bar {
   color: #f1f1f1;
@@ -611,14 +612,6 @@ body.dark-mode .settings-close-btn:hover {
 /* --- View Style Toggle & Menu --- */
 #view-style-toggle {
   top: 340px; /* Position unterhalb von cluster-toggle */
-  width: auto;
-  padding: 0 12px;
-  border-radius: var(--glass-radius);
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
 #view-style-toggle span {
   line-height: 1;
