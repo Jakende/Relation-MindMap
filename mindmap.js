@@ -14,7 +14,7 @@ let fixedNodes = [];          // Array to track fixed nodes
 let originalGraphNodes = null; // NEU: Originale Knoten für GraphView
 let originalGraphLinks = null; // NEU: Originale Links für GraphView
 let originalNodePositions = new Map(); // NEU: Originalpositionen der Knoten
-let currentTreeViewStyle = 'default'; // NEU: Aktueller TreeView-Stil
+let currentTreeViewStyle = 'compact'; // NEU: Aktueller TreeView-Stil
 
 // Globale Referenzen für DOM-Elemente, die außerhalb von DOMContentLoaded benötigt werden
 let viewStyleToggle;
@@ -711,6 +711,25 @@ function updateSimulationSettings() {
   simulation.alpha(1).restart();
 }
 
+// Aktualisiert die Farben aller Knoten entsprechend des aktuellen Farbschemas
+function applyColorScheme() {
+  const scheme = colorSchemes[currentScheme] || d3.schemeCategory10;
+  const svg = d3.select('svg');
+  if (currentLayout === 'graph') {
+    const scale = d3.scaleOrdinal(scheme);
+    svg.selectAll('.node circle').transition().duration(200)
+      .attr('fill', d => scale(d.group));
+  } else {
+    svg.selectAll('.node circle').transition().duration(200)
+      .attr('fill', d => {
+        if (currentScheme === 'greys') {
+          return scheme[Math.min(d.depth * 2, scheme.length - 1)];
+        }
+        return scheme[d.depth % scheme.length];
+      });
+  }
+}
+
 // NEU: Tags aus Knotennamen parsen
 function parseTags(nodeId) {
   const match = nodeId.match(/\[(.*?)\]$/); // Sucht nach [Tag1, Tag2] am Ende des Strings
@@ -1105,8 +1124,7 @@ function applyCurrentClusterMode() {
 // NEU: TreeView-Stil umschalten
 function toggleTreeViewStyle(styleClass) {
   const svg = d3.select('svg');
-  svg.classed('tree-view-default', false)
-     .classed('tree-view-compact', false)
+  svg.classed('tree-view-compact', false)
      .classed('tree-view-highlight', false)
      .classed(`tree-view-${styleClass}`, true);
   currentTreeViewStyle = styleClass; // Zustand speichern
@@ -1122,7 +1140,7 @@ function toggleTreeViewStyle(styleClass) {
         clusterToggle.classList.remove('toggle-btn--active');
       }
     } else {
-      // Bei "Standard" oder "Kompakt" Cluster-Status beibehalten
+      // Bei "Kompakt" Cluster-Status beibehalten
       // (falls zuvor aktiviert, bleibt es aktiv)
       if (clusterEnabled) {
         applyTagClustering(+minConnectionsInput.value);
@@ -1434,7 +1452,9 @@ function loadAllSettings() {
     const settings = JSON.parse(saved);
 
     // TreeView-Stil
-    currentTreeViewStyle = settings.treeViewStyle ?? 'default';
+    currentTreeViewStyle = settings.treeViewStyle === 'default'
+      ? 'compact'
+      : (settings.treeViewStyle ?? 'compact');
     // graphSettings
     Object.assign(graphSettings, settings.graphSettings ?? {});
     // Farbschema
@@ -1825,10 +1845,10 @@ window.addEventListener('DOMContentLoaded', () => {
         initializeTree(currentHierarchy);
         setTimeout(centerGraphOrTree, 400);
       }
-      // NEU: Cluster-Button im TreeView deaktivieren
+      // Cluster-Button auch im TreeView verfügbar
       if (clusterToggle) {
-        clusterToggle.disabled = true;
-        clusterToggle.classList.add('toggle-btn--disabled');
+        clusterToggle.disabled = false;
+        clusterToggle.classList.remove('toggle-btn--disabled');
       }
     }
   });
@@ -1863,22 +1883,12 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   // --- Palette-Buttons: Farbschema wechseln ---
   document.querySelectorAll('.palette-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', () => {
       currentScheme = btn.getAttribute('data-scheme');
       paletteMenu.classList.add('is-hidden');
       paletteToggle.classList.remove('toggle-btn--active');
-      if (currentGraph && currentLayout === 'graph') {
-        initializeForceGraph(currentGraph);
-      } else if (currentHierarchy && currentLayout === 'tree') {
-        initializeTree(currentHierarchy);
-      } else if (currentGraph && currentLayout === 'tree') {
-        initializeTree(currentGraph);
-      }
-      // --- Ensure graph is visible and centered after color change ---
-      setTimeout(() => {
-        centerGraphOrTree();
-        d3.select('svg').style('opacity', 1);
-      }, 100);
+      applyColorScheme();
+      saveAllSettings();
     });
   });
   // --- Darkmode-Button ---
@@ -1999,6 +2009,10 @@ clusterToggle.addEventListener('click', (e) => {
     e.stopPropagation();
     const hidden = searchBar.classList.toggle("is-hidden");
     searchToggle.classList.toggle("toggle-btn--active", !hidden);
+    searchToggle.classList.toggle("is-hidden", !hidden);
+    if (!hidden) {
+      document.getElementById('search-input').focus();
+    }
   });
 
 
@@ -2026,6 +2040,7 @@ clusterToggle.addEventListener('click', (e) => {
     if (!searchBar.contains(e.target) && e.target !== searchToggle) {
       searchBar.classList.add("is-hidden");
       searchToggle.classList.remove("toggle-btn--active");
+      searchToggle.classList.remove("is-hidden");
       if (searchResults) searchResults.style.display = "none";
     }
     // NEU: View Style Toggle
@@ -2271,6 +2286,7 @@ clusterToggle.addEventListener('click', (e) => {
     infoMenu.classList.add('is-hidden');
     searchBar.classList.add('is-hidden');
     searchToggle.classList.remove('toggle-btn--active');
+    searchToggle.classList.remove('is-hidden');
   });
   closeSettings.addEventListener('click', (e) => {
     settingsMenu.classList.add('is-hidden');
