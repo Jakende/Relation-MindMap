@@ -33,28 +33,28 @@ Refactoring 2025-05-20:
 <body>
   <div id="controls-wrapper">
     <!-- Header: Top right group -->
-    <button id="export-toggle" class="toggle-btn" title="Exportoptionen anzeigen" aria-label="Exportoptionen anzeigen">⬇️</button>
-    <button id="import-toggle" class="toggle-btn" title="Datei importieren" aria-label="Datei importieren">📁</button>
-    <button id="edit-toggle" class="toggle-btn" title="Markdown Editor anzeigen" aria-label="Markdown Editor anzeigen">✏️</button>
-    <button id="clear-toggle" class="toggle-btn" title="Mindmap leeren" aria-label="Mindmap leeren">🗑️</button>
-    <button id="graphmode-toggle" class="toggle-btn" title="Graph/Tree Layout umschalten" aria-label="Graph/Tree Layout umschalten">🔄</button>
-    <button id="sticky-nodes-toggle" class="toggle-btn" title="Knoten-Fixierung an/aus">🔒</button> <!-- NEU -->
-    <button id="cluster-toggle" class="toggle-btn" title="Cluster-Gruppierung" aria-label="Cluster-Gruppierung"></button>
+    <button id="export-toggle" class="toggle-btn" title="Exportoptionen anzeigen" aria-label="Exportoptionen anzeigen">⤓</button>
+    <button id="import-toggle" class="toggle-btn" title="Datei importieren" aria-label="Datei importieren">⤒</button>
+    <button id="edit-toggle" class="toggle-btn" title="Markdown Editor anzeigen" aria-label="Markdown Editor anzeigen">ED</button>
+    <button id="clear-toggle" class="toggle-btn" title="Mindmap leeren" aria-label="Mindmap leeren">⌫</button>
+    <button id="graphmode-toggle" class="toggle-btn" title="Graph/Tree Layout umschalten" aria-label="Graph/Tree Layout umschalten">⌬</button>
+    <button id="sticky-nodes-toggle" class="toggle-btn" title="Knoten-Fixierung an/aus">⌖</button> <!-- NEU -->
+    <button id="cluster-toggle" class="toggle-btn" title="Cluster-Gruppierung" aria-label="Cluster-Gruppierung">◫</button>
     <div id="view-style-toggle" class="toggle-btn" title="Ansichtsstil wählen" aria-label="Ansichtsstil wählen">
-      <span>📐</span>
+      <span>▦</span>
       <div id="view-style-menu" class="dropdown-menu glass-surface is-hidden">
         <button class="dropdown-item" data-style="compact">Kompakt</button>
         <button class="dropdown-item" data-style="highlight">Hervorheben</button>
       </div>
     </div>
-    <button id="relations-toggle" class="toggle-btn" title="Relationen anzeigen/ausblenden" aria-label="Relationen anzeigen/ausblenden"><span class="icon">🔗</span></button>
+    <button id="relations-toggle" class="toggle-btn" title="Relationen anzeigen/ausblenden" aria-label="Relationen anzeigen/ausblenden"><span class="icon">⇄</span></button>
 
     <!-- Footer: Bottom right group -->
-    <button id="fullscreen-toggle" class="toggle-btn" title="Vollbildmodus umschalten" aria-label="Vollbildmodus umschalten">⛶</button>
-    <button id="showall-toggle" class="toggle-btn" title="Alle Texte anzeigen/ausblenden" aria-label="Alle Texte anzeigen/ausblenden">🅰️</button>
-    <button id="palette-toggle" class="toggle-btn toggle-btn--palette" title="Farbschema auswählen" aria-label="Farbschema auswählen">🎨</button>
-    <button id="settings-toggle" class="toggle-btn" title="Darstellung & Animation einstellen" aria-label="Darstellung & Animation einstellen">⚙️</button>
-    <button id="darkmode-toggle" class="toggle-btn toggle-btn--darkmode" title="Dark Mode umschalten" aria-label="Dark Mode umschalten">🌙</button>
+    <button id="fullscreen-toggle" class="toggle-btn" title="Vollbildmodus umschalten" aria-label="Vollbildmodus umschalten">⤢</button>
+    <button id="showall-toggle" class="toggle-btn" title="Alle Texte anzeigen/ausblenden" aria-label="Alle Texte anzeigen/ausblenden">⊞</button>
+    <button id="palette-toggle" class="toggle-btn toggle-btn--palette" title="Farbschema auswählen" aria-label="Farbschema auswählen">◩</button>
+    <button id="settings-toggle" class="toggle-btn" title="Darstellung & Animation einstellen" aria-label="Darstellung & Animation einstellen">CF</button>
+    <button id="darkmode-toggle" class="toggle-btn toggle-btn--darkmode" title="Dark Mode umschalten" aria-label="Dark Mode umschalten">◐</button>
   </div>
   <!-- Relations-Toggle wird per JS als .toggle-btn.toggle-btn--relations eingefügt -->
 
@@ -63,6 +63,34 @@ Refactoring 2025-05-20:
   <!-- Palette-Menu und Export-Bar -->
   <div id="palette-menu" role="menu" aria-label="Farbschema wählen" class="glass-surface is-hidden">
     <div class="palette-title">Farbschema wählen</div>
+    <div class="legend" aria-hidden="true">
+      <div class="legend-title">Sequential</div>
+      <div class="legend-scale">
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+      </div>
+    </div>
+    <div class="legend legend--diverging" aria-hidden="true">
+      <div class="legend-title">Diverging</div>
+      <div class="legend-scale">
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+        <span class="legend-swatch"></span>
+      </div>
+    </div>
     <button class="palette-btn" data-scheme="category10">Klassisch (Standard)</button>
     <button class="palette-btn" data-scheme="accent">Frisch & Akzentuiert</button>
     <button class="palette-btn" data-scheme="dark2">Dunkel & Kontrastreich</button>
@@ -156,8 +184,8 @@ Refactoring 2025-05-20:
   <svg></svg>
   <div id="info-bar" class="glass-surface"></div>
 
-  <button id="search-toggle" class="toggle-btn toggle-btn--search" title="Suche" aria-label="Suche">🔍</button>
+  <button id="search-toggle" class="toggle-btn toggle-btn--search" title="Suche" aria-label="Suche">⌕</button>
 
-  <button id="info-toggle" class="toggle-btn toggle-btn--info" title="Hilfe & Informationen" aria-label="Hilfe & Informationen">i</button>
+  <button id="info-toggle" class="toggle-btn toggle-btn--info" title="Hilfe & Informationen" aria-label="Hilfe & Informationen">?</button>
 </body>
 </html>

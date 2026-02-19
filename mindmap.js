@@ -1471,7 +1471,7 @@ function loadAllSettings() {
 
     // UI-Elemente aktualisieren
     loadSettingsToSliders(); // Slider-Werte setzen
-    document.getElementById('darkmode-toggle').classList.toggle('toggle-btn--active', document.body.classList.contains('dark-mode'));
+    document.getElementById('darkmode-toggle').classList.toggle('toggle-btn--active', document.body.classList.contains('theme-invert'));
     document.getElementById('showall-toggle').classList.toggle('toggle-btn--active', showAllTexts);
     document.getElementById('sticky-nodes-toggle').classList.toggle('toggle-btn--active', stickyNodesEnabled);
     const relationsToggle = document.getElementById('relations-toggle');
@@ -1894,9 +1894,10 @@ window.addEventListener('DOMContentLoaded', () => {
   // --- Darkmode-Button ---
   darkToggle.addEventListener('click', (e) => {
     e.stopPropagation();
-    body.classList.toggle('dark-mode');
-    document.documentElement.classList.toggle('dark-mode');
-    darkToggle.classList.toggle('toggle-btn--active', body.classList.contains('dark-mode'));
+    const isInverted = body.classList.toggle('theme-invert');
+    body.classList.toggle('dark-mode', isInverted);
+    document.documentElement.classList.toggle('dark-mode', isInverted);
+    darkToggle.classList.toggle('toggle-btn--active', isInverted);
   });
   // --- Relations-Toggle (optional, falls vorhanden) ---
   if (relationsToggle) {
@@ -2372,7 +2373,7 @@ clusterToggle.addEventListener('click', (e) => {
       error = e;
     }
     // Detect dark mode from app or system
-    const isDark = document.body.classList.contains('dark-mode') || window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = !document.body.classList.contains('theme-invert');
     // Render Markdown to HTML (headlines, bold, etc.)
     let html = '';
     if (error) {
