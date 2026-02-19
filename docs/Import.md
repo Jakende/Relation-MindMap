@@ -7,7 +7,7 @@ Relation-MindMap supports importing mind maps from Markdown (.md) and JSON (.jso
 - Use hierarchical lists with indentation to define node relationships
 - Supported syntax:
 
-  ```
+  ```md
   - Parent Node
       - Child Node 1
       - Child Node 2
