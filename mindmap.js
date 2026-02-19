@@ -7,8 +7,37 @@ let showAllTexts = false;
 let currentGraph = null;      // Graph-Objekt für Graph-View
 let currentHierarchy = null;  // Hierarchie-Objekt für Tree-View
 let stickyNodesEnabled = true; // Standardmäßig ist Fixierung aktiv
+let clusterEnabled = false;    // NEU: Cluster-Modus deaktiviert
+let currentClusterMode = 'none'; // NEU: Gewählter Cluster-Modus
 let totalEnabled = false;      // Total-Modus deaktiviert
 let fixedNodes = [];          // Array to track fixed nodes
+let originalGraphNodes = null; // NEU: Originale Knoten für GraphView
+let originalGraphLinks = null; // NEU: Originale Links für GraphView
+let originalNodePositions = new Map(); // NEU: Originalpositionen der Knoten
+let currentTreeViewStyle = 'compact'; // NEU: Aktueller TreeView-Stil
+
+// Globale Referenzen für DOM-Elemente, die außerhalb von DOMContentLoaded benötigt werden
+let viewStyleToggle;
+let viewStyleMenu;
+let clusterToggle;
+let relationsToggle;
+let showAllToggle;
+let stickyNodesToggle;
+let darkToggle;
+let paletteToggle;
+let exportToggle;
+let searchToggle;
+let infoToggle;
+let settingsToggle;
+let markdownEditor;
+let editorContainer;
+let searchBar;
+let searchResults;
+let infoMenu;
+let paletteMenu;
+let exportBar;
+let body;
+let minConnectionsInput;
 
 const colorSchemes = {
   category10: d3.schemeCategory10,
@@ -37,22 +66,17 @@ function applySettingsFromSliders() {
   graphSettings.animDuration = +document.getElementById('slider-animduration').value;
   graphSettings.collision = +document.getElementById('slider-collision').value;
   graphSettings.nodeTextSize = +document.getElementById('slider-nodetextsize').value; // NEU
-  // Save to localStorage
-  localStorage.setItem('mindmapSettings', JSON.stringify(graphSettings));
+  saveAllSettings(); // Speichere alle Einstellungen
 }
 
 function loadSettingsToSliders() {
-  const saved = localStorage.getItem('mindmapSettings');
-  if (saved) {
-    const s = JSON.parse(saved);
-    for (const k in s) if (graphSettings.hasOwnProperty(k)) graphSettings[k] = s[k];
-    document.getElementById('slider-linkdistance').value = graphSettings.linkDistance;
-    document.getElementById('slider-nodesize').value = graphSettings.nodeSize;
-    document.getElementById('slider-hierarchyscale').value = graphSettings.hierarchyScale;
-    document.getElementById('slider-animduration').value = graphSettings.animDuration;
-    document.getElementById('slider-collision').value = graphSettings.collision;
-    document.getElementById('slider-nodetextsize').value = graphSettings.nodeTextSize; // NEU
-  }
+  // Diese Funktion lädt nur die Slider-Werte in die UI, nicht aus LocalStorage
+  document.getElementById('slider-linkdistance').value = graphSettings.linkDistance;
+  document.getElementById('slider-nodesize').value = graphSettings.nodeSize;
+  document.getElementById('slider-hierarchyscale').value = graphSettings.hierarchyScale;
+  document.getElementById('slider-animduration').value = graphSettings.animDuration;
+  document.getElementById('slider-collision').value = graphSettings.collision;
+  document.getElementById('slider-nodetextsize').value = graphSettings.nodeTextSize; // NEU
 }
 
 // === Exporte / Hilfsfunktionen ===
@@ -285,9 +309,12 @@ function initializeTree(data) {
   const root = d3.hierarchy(data);
   const nodes = root.descendants();
   const links = root.links();
-  // Knotengröße nach Settings
+
+  // NEU: Tags zu Knoten hinzufügen
   nodes.forEach(d => {
-    d.r = Math.max(5, graphSettings.nodeSize - d.depth * graphSettings.hierarchyScale * graphSettings.nodeSize + 5);
+    d.data.tags = parseTags(d.data.name);
+    // Sicherstellen, dass der Radius nicht negativ wird
+    d.r = Math.max(5, graphSettings.nodeSize - d.depth * graphSettings.hierarchyScale * graphSettings.nodeSize);
   });
 
   function getColor(d) {
@@ -442,6 +469,15 @@ function initializeTree(data) {
       })
     .on("end", (event, d) => {
       if (!event.active) simulation.alphaTarget(0); // Simulation abkühlen lassen
+      // Manuelle Gruppierung logik hier einfügen (z.B. Knoten an Zielposition fixieren)
+      // Beispiel: Wenn ein Knoten auf einen anderen Knoten gezogen wird, gruppiere sie
+      const targetNode = findTargetNode(event.x, event.y, nodes, d); // Hilfsfunktion
+      if (targetNode && currentClusterMode === 'manual' && clusterEnabled) {
+        d.manualGroup = targetNode.manualGroup || targetNode.id;
+        d.clusterId = d.manualGroup;
+        applyManualClustering();
+      }
+
       // Nur lösen, wenn Fixierung AUS ist
       if (!stickyNodesEnabled) {
         d.fx = null;
@@ -523,6 +559,9 @@ function initializeTree(data) {
   // Store simulation globally for centering
   window.lastSimulation = simulation;
 
+  // NEU: TreeView-Stil anwenden
+  toggleTreeViewStyle(currentTreeViewStyle);
+
   // Setup gemeinsame Suchleiste
   setupSearchBar(
     g,
@@ -559,6 +598,558 @@ function initializeTree(data) {
       document.getElementById("info-bar").innerHTML = `<span class="path">${path.join(" → ")}</span>`;
     }
   );
+}
+
+// NEU: Hierarchisches Layout für GraphView anwenden (ersetzt applyClusterLayout)
+function applyHierarchicalLayoutForGraphView() {
+  if (!window.lastSimulation || !currentGraph) return;
+
+  const nodes = window.lastSimulation.nodes();
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const maxGroup = d3.max(nodes, d => d.group) || 1;
+
+  window.lastSimulation.force("hierarchyX", d3.forceX()
+    .x(d => {
+      const padding = 100;
+      const availableWidth = width - 2 * padding;
+      return padding + (d.group / maxGroup) * availableWidth;
+    })
+    .strength(0.2)
+  );
+
+  // Gleichmäßige vertikale Verteilung
+  window.lastSimulation.force("hierarchyY", d3.forceY()
+    .y(d => {
+      // Gruppieren nach Ebene
+      const groupNodes = nodes.filter(n => n.group === d.group);
+      const index = groupNodes.indexOf(d);
+      return (index + 1) * (height / (groupNodes.length + 1));
+    })
+    .strength(0.1)
+  );
+
+  window.lastSimulation.alpha(1).restart();
+}
+
+// NEU: Ursprüngliches Layout wiederherstellen (für GraphView)
+function resetGraphLayout() {
+  if (!window.lastSimulation) return;
+
+  const simulation = window.lastSimulation;
+
+  // Hierarchische Kräfte entfernen
+  simulation.force('hierarchyX', null);
+  simulation.force('hierarchyY', null);
+
+  // Standardkräfte wiederherstellen (falls sie entfernt wurden)
+  simulation.force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+  simulation.force("charge", d3.forceManyBody().strength(-100)); // Oder den ursprünglichen Wert
+
+  // Knoten auf Originalpositionen zurücksetzen
+  simulation.nodes().forEach(node => {
+    if (originalNodePositions.has(node.id)) {
+      const pos = originalNodePositions.get(node.id);
+      node.x = pos.x;
+      node.y = pos.y;
+      node.fx = null; // Fixierung aufheben
+      node.fy = null;
+    }
+  });
+  originalNodePositions.clear(); // Map leeren
+
+  // Simulation mit höherer Alpha-Target neu starten für schnellere Animation
+  simulation.alpha(0.5).restart(); // Erhöhter Wert für schnellere Bewegung
+}
+
+// NEU: Setzt den Cluster-Modus zurück
+function resetClusterState() {
+  clusterEnabled = false;
+  const clusterToggle = document.getElementById('cluster-toggle');
+  if (clusterToggle) {
+    clusterToggle.classList.remove('toggle-btn--active');
+  }
+  disableTagClustering(); // Für TreeView
+  resetGraphLayout(); // Für GraphView
+}
+
+// NEU: Aktualisiert die Simulationseinstellungen ohne Neuladen des Graphen
+function updateSimulationSettings() {
+  if (!window.lastSimulation) return;
+
+  const simulation = window.lastSimulation;
+  const nodes = simulation.nodes();
+
+  // Aktualisiere Knotengrößen basierend auf neuen Einstellungen
+  nodes.forEach(d => {
+    if (currentLayout === 'tree') {
+      // Sicherstellen, dass der Radius nicht negativ wird
+      d.r = Math.max(5, graphSettings.nodeSize - d.depth * graphSettings.hierarchyScale * graphSettings.nodeSize);
+    } else {
+      // Sicherstellen, dass der Radius nicht negativ wird
+      d.r = Math.max(5, graphSettings.nodeSize - (d.group || 0) * graphSettings.hierarchyScale * graphSettings.nodeSize);
+    }
+  });
+
+  // Aktualisiere die Kräfte der Simulation
+  const linkForce = simulation.force('link');
+  if (linkForce) {
+    linkForce.distance(graphSettings.linkDistance);
+  }
+  simulation
+    .force("charge", d3.forceManyBody().strength(-220)) // Oder den ursprünglichen Wert
+    .force("collision", d3.forceCollide().radius(d => d.r + graphSettings.collision));
+
+  // Aktualisiere die visuellen Attribute der Knoten und Links
+  d3.select("svg").selectAll(".node circle").attr("r", d => d.r);
+  d3.select("svg").selectAll(".node text").style("font-size", graphSettings.nodeTextSize + "px");
+  d3.select("svg").selectAll(".link").attr("stroke-width", d => d.value ? Math.max(1.5, d.value) : 1.5);
+  // NEU: Aktualisiere Relations-Label-Größe
+  d3.select("svg").selectAll(".link-label").style("font-size", (graphSettings.nodeTextSize - 2) + "px");
+
+  // Simulation neu starten, damit Änderungen wirksam werden
+  simulation.alpha(1).restart();
+}
+
+// Aktualisiert die Farben aller Knoten entsprechend des aktuellen Farbschemas
+function applyColorScheme() {
+  const scheme = colorSchemes[currentScheme] || d3.schemeCategory10;
+  const svg = d3.select('svg');
+  if (currentLayout === 'graph') {
+    const scale = d3.scaleOrdinal(scheme);
+    svg.selectAll('.node circle').transition().duration(200)
+      .attr('fill', d => scale(d.group));
+  } else {
+    svg.selectAll('.node circle').transition().duration(200)
+      .attr('fill', d => {
+        if (currentScheme === 'greys') {
+          return scheme[Math.min(d.depth * 2, scheme.length - 1)];
+        }
+        return scheme[d.depth % scheme.length];
+      });
+  }
+}
+
+// NEU: Tags aus Knotennamen parsen
+function parseTags(nodeId) {
+  const match = nodeId.match(/\[(.*?)\]$/); // Sucht nach [Tag1, Tag2] am Ende des Strings
+  if (match && match[1]) {
+    return match[1].split(',').map(tag => tag.trim());
+  }
+  return [];
+}
+
+// NEU: Cluster-Gruppierung für TreeView (Tag-basiert)
+function applyTagClustering(minConnections = 0) {
+  if (!window.lastSimulation) return;
+
+  const simulation = window.lastSimulation;
+  const nodes = simulation.nodes();
+  const links = simulation.links();
+  const g = d3.select("svg").select("g");
+
+  // Verbindungsanzahl pro Knoten ermitteln
+  const connectionCounts = new Map();
+  nodes.forEach(node => connectionCounts.set(node.id, 0));
+  links.forEach(link => {
+    connectionCounts.set(link.source.id, connectionCounts.get(link.source.id) + 1);
+    connectionCounts.set(link.target.id, connectionCounts.get(link.target.id) + 1);
+  });
+
+  // 1. Knoten nach Tags gruppieren
+  const tagClusters = new Map(); // Map: Tag -> [nodes]
+  nodes.forEach(node => {
+    if ((connectionCounts.get(node.id) || 0) < minConnections) return;
+    const tags = node.data.tags;
+    if (tags.length === 0) {
+      // Knoten ohne Tags in "Ungegruppert" Cluster
+      if (!tagClusters.has("Ungegruppert")) {
+        tagClusters.set("Ungegruppert", []);
+      }
+      tagClusters.get("Ungegruppert").push(node);
+    } else {
+      tags.forEach(tag => {
+        if (!tagClusters.has(tag)) {
+          tagClusters.set(tag, []);
+        }
+        tagClusters.get(tag).push(node);
+      });
+    }
+  });
+
+  // 2. Visuelle Darstellung der Cluster (Hintergrundfarbe)
+  // Entferne alte Cluster-Rechtecke
+  g.selectAll(".cluster-rect").remove();
+  g.selectAll(".cluster-label").remove(); // Auch Labels entfernen
+
+  const clusterColors = d3.scaleOrdinal(d3.schemePaired); // Farbpalette für Cluster
+
+  // Berechne Cluster-Zentren und Bounding Boxes
+  const clusterData = [];
+  tagClusters.forEach((clusterNodes, tag) => {
+    if (clusterNodes.length === 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let centerX = 0, centerY = 0;
+
+    clusterNodes.forEach(node => {
+      minX = Math.min(minX, node.x - node.r);
+      minY = Math.min(minY, node.y - node.r);
+      maxX = Math.max(maxX, node.x + node.r);
+      maxY = Math.max(maxY, node.y + node.r);
+      centerX += node.x;
+      centerY += node.y;
+    });
+
+    centerX /= clusterNodes.length;
+    centerY /= clusterNodes.length;
+
+    const padding = 20;
+    const rectX = minX - padding;
+    const rectY = minY - padding;
+    const rectWidth = maxX - minX + 2 * padding;
+    const rectHeight = maxY - minY + 2 * padding;
+
+    clusterData.push({
+      tag: tag,
+      nodes: clusterNodes,
+      centerX: centerX,
+      centerY: centerY,
+      rect: { x: rectX, y: rectY, width: rectWidth, height: rectHeight }
+    });
+    // mark nodes with this cluster id
+    clusterNodes.forEach(n => { n.clusterId = tag; });
+  });
+
+  // Zeichne Cluster-Rechtecke und Labels
+  clusterData.forEach(cluster => {
+    g.insert("rect", ":first-child") // Füge Rechteck hinter den Knoten ein
+      .attr("class", "cluster-rect")
+      .attr("x", cluster.rect.x)
+      .attr("y", cluster.rect.y)
+      .attr("width", cluster.rect.width)
+      .attr("height", cluster.rect.height)
+      .attr("fill", clusterColors(cluster.tag))
+      .attr("opacity", 0.2)
+      .attr("rx", 10) // Abgerundete Ecken
+      .attr("ry", 10);
+
+    g.append("text")
+      .attr("class", "cluster-label")
+      .attr("x", cluster.rect.x + cluster.rect.width / 2)
+      .attr("y", cluster.rect.y + 15) // Position über dem Rechteck
+      .attr("text-anchor", "middle")
+      .text(cluster.tag)
+      .attr("fill", clusterColors(cluster.tag))
+      .attr("font-weight", "bold");
+  });
+
+  // 3. Simulation anpassen, um Cluster zu berücksichtigen
+  // Füge eine Kraft hinzu, die Knoten zu ihrem Cluster-Zentrum zieht
+  simulation.force("cluster", forceCluster()
+    .centers(clusterData.map(c => ({ x: c.centerX, y: c.centerY, id: c.tag })))
+    .strength(0.1) // Stärke der Anziehung zum Cluster-Zentrum
+  );
+
+  // Eine Kollisionskraft zwischen Clustern (optional, kann komplex werden)
+  // Für den Anfang lassen wir die Standard-Kollisionskraft der Knoten.
+
+  simulation.alpha(1).restart();
+}
+
+// Hilfsfunktion für die Cluster-Kraft
+function forceCluster(getIdFn = d => d.clusterId) {
+  let nodes;
+  let centers;
+  let strength = 0.1;
+
+  function force(alpha) {
+    if (!centers) return;
+
+    for (let i = 0, n = nodes.length; i < n; ++i) {
+      const node = nodes[i];
+      const cid = getIdFn(node);
+      if (cid == null) continue;
+      const targetCenter = centers.find(c => c.id === cid);
+      if (targetCenter) {
+        node.vx -= (node.x - targetCenter.x) * strength * alpha;
+        node.vy -= (node.y - targetCenter.y) * strength * alpha;
+      }
+    }
+  }
+
+  force.initialize = function(_) {
+    nodes = _;
+  };
+
+  force.centers = function(_) {
+    return arguments.length ? (centers = _, force) : centers;
+  };
+
+  force.strength = function(_) {
+    return arguments.length ? (strength = _, force) : strength;
+  };
+
+  return force;
+}
+
+// NEU: Dynamische Cluster-Adaptierung basierend auf Verbindungen
+function dynamicClusterAdaptation(minConnections = 3) {
+  if (!window.lastSimulation) return;
+
+  const simulation = window.lastSimulation;
+  const nodes = simulation.nodes();
+  const links = simulation.links();
+  const g = d3.select("svg").select("g");
+
+  // 1. Verbindungen zählen
+  const connectionCounts = new Map(); // Map: Knoten-ID -> Anzahl der Verbindungen
+  nodes.forEach(node => connectionCounts.set(node.id, 0));
+  links.forEach(link => {
+    connectionCounts.set(link.source.id, connectionCounts.get(link.source.id) + 1);
+    connectionCounts.set(link.target.id, connectionCounts.get(link.target.id) + 1);
+  });
+
+  // 2. Cluster basierend auf Verbindungsstärke bilden
+  const dynamicClusters = new Map(); // Map: Cluster-ID -> [nodes]
+  nodes.forEach(node => {
+    const strength = connectionCounts.get(node.id);
+    if (strength >= minConnections) {
+      const clusterId = `dense-cluster-${node.id}`; // Eindeutige ID für dichte Cluster
+      if (!dynamicClusters.has(clusterId)) {
+        dynamicClusters.set(clusterId, []);
+      }
+      dynamicClusters.get(clusterId).push(node);
+    } else {
+      // Knoten, die nicht dicht genug sind, können in einen "lose" Cluster oder einzeln bleiben
+      if (!dynamicClusters.has("loose-nodes")) {
+        dynamicClusters.set("loose-nodes", []);
+      }
+      dynamicClusters.get("loose-nodes").push(node);
+    }
+  });
+
+  // 3. Visuelle Darstellung der Cluster (Hintergrundfarbe)
+  // Entferne alte Cluster-Rechtecke
+  g.selectAll(".cluster-rect").remove();
+  g.selectAll(".cluster-label").remove();
+
+  // Verwende eine moderne Farbpalette aus d3-scale-chromatic
+  const clusterColors = d3.scaleOrdinal(d3.schemeTableau10); // Farbpalette für Cluster
+
+  const clusterData = [];
+  dynamicClusters.forEach((clusterNodes, clusterId) => {
+    if (clusterNodes.length === 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let centerX = 0, centerY = 0;
+
+    clusterNodes.forEach(node => {
+      minX = Math.min(minX, node.x - node.r);
+      minY = Math.min(minY, node.y - node.r);
+      maxX = Math.max(maxX, node.x + node.r);
+      maxY = Math.max(maxY, node.y + node.r);
+      centerX += node.x;
+      centerY += node.y;
+    });
+
+    centerX /= clusterNodes.length;
+    centerY /= clusterNodes.length;
+
+    const padding = 20;
+    const rectX = minX - padding;
+    const rectY = minY - padding;
+    const rectWidth = maxX - minX + 2 * padding;
+    const rectHeight = maxY - minY + 2 * padding;
+
+    clusterData.push({
+      id: clusterId,
+      nodes: clusterNodes,
+      centerX: centerX,
+      centerY: centerY,
+      rect: { x: rectX, y: rectY, width: rectWidth, height: rectHeight }
+    });
+    clusterNodes.forEach(n => { n.clusterId = clusterId; });
+  });
+
+  // Zeichne Cluster-Rechtecke und Labels
+  clusterData.forEach(cluster => {
+    g.insert("rect", ":first-child")
+      .attr("class", "cluster-rect")
+      .attr("x", cluster.rect.x)
+      .attr("y", cluster.rect.y)
+      .attr("width", cluster.rect.width)
+      .attr("height", cluster.rect.height)
+      .attr("fill", clusterColors(cluster.id))
+      .attr("opacity", 0.15)
+      .attr("rx", 10)
+      .attr("ry", 10);
+
+    g.append("text")
+      .attr("class", "cluster-label")
+      .attr("x", cluster.rect.x + cluster.rect.width / 2)
+      .attr("y", cluster.rect.y + 15)
+      .attr("text-anchor", "middle")
+      .text(cluster.id.replace('dense-cluster-', 'Cluster ')) // Schönere Beschriftung
+      .attr("fill", clusterColors(cluster.id))
+      .attr("font-weight", "bold");
+  });
+
+  // 4. Simulation anpassen, um Cluster zu berücksichtigen
+  simulation.force("dynamicCluster", forceCluster()
+    .centers(clusterData.map(c => ({ x: c.centerX, y: c.centerY, id: c.id })))
+    .strength(0.05) // Leichtere Anziehung
+  );
+
+  simulation.alpha(1).restart();
+}
+
+// Manual clustering via drag & drop
+function applyManualClustering() {
+  if (!window.lastSimulation) return;
+
+  const simulation = window.lastSimulation;
+  const nodes = simulation.nodes();
+  const g = d3.select('svg').select('g');
+
+  const groups = new Map();
+  nodes.forEach(node => {
+    if (node.manualGroup) {
+      if (!groups.has(node.manualGroup)) groups.set(node.manualGroup, []);
+      groups.get(node.manualGroup).push(node);
+    }
+  });
+
+  g.selectAll('.cluster-rect').remove();
+  g.selectAll('.cluster-label').remove();
+
+  const clusterColors = d3.scaleOrdinal(d3.schemeSet2);
+  const clusterData = [];
+  groups.forEach((clusterNodes, groupId) => {
+    if (clusterNodes.length < 2) return; // ignore single nodes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let centerX = 0, centerY = 0;
+    clusterNodes.forEach(node => {
+      minX = Math.min(minX, node.x - node.r);
+      minY = Math.min(minY, node.y - node.r);
+      maxX = Math.max(maxX, node.x + node.r);
+      maxY = Math.max(maxY, node.y + node.r);
+      centerX += node.x;
+      centerY += node.y;
+    });
+    centerX /= clusterNodes.length;
+    centerY /= clusterNodes.length;
+    const padding = 20;
+    const rectX = minX - padding;
+    const rectY = minY - padding;
+    const rectWidth = maxX - minX + 2 * padding;
+    const rectHeight = maxY - minY + 2 * padding;
+    clusterData.push({
+      id: groupId,
+      nodes: clusterNodes,
+      centerX,
+      centerY,
+      rect: { x: rectX, y: rectY, width: rectWidth, height: rectHeight }
+    });
+    clusterNodes.forEach(n => { n.clusterId = groupId; });
+  });
+
+  clusterData.forEach(cluster => {
+    g.insert('rect', ':first-child')
+      .attr('class', 'cluster-rect')
+      .attr('x', cluster.rect.x)
+      .attr('y', cluster.rect.y)
+      .attr('width', cluster.rect.width)
+      .attr('height', cluster.rect.height)
+      .attr('fill', clusterColors(cluster.id))
+      .attr('opacity', 0.2)
+      .attr('rx', 10)
+      .attr('ry', 10);
+
+    g.append('text')
+      .attr('class', 'cluster-label')
+      .attr('x', cluster.rect.x + cluster.rect.width / 2)
+      .attr('y', cluster.rect.y + 15)
+      .attr('text-anchor', 'middle')
+      .attr('fill', clusterColors(cluster.id))
+      .attr('font-weight', 'bold')
+      .text('Gruppe');
+  });
+
+  simulation.force('manualCluster', forceCluster()
+    .centers(clusterData.map(c => ({ x: c.centerX, y: c.centerY, id: c.id })))
+    .strength(0.05)
+  );
+
+  simulation.alpha(1).restart();
+}
+
+// NEU: Cluster-Gruppierung für TreeView aufheben
+function disableTagClustering() {
+  const g = d3.select("svg").select("g");
+  g.selectAll(".cluster-rect").remove();
+  g.selectAll(".cluster-label").remove();
+
+  // Simulation neu starten, um Knoten in ihren ursprünglichen Zustand zu versetzen
+  if (window.lastSimulation) {
+    const sim = window.lastSimulation;
+    sim.nodes().forEach(n => { delete n.clusterId; delete n.manualGroup; });
+    sim.force('cluster', null);
+    sim.force('dynamicCluster', null);
+    sim.force('manualCluster', null);
+    sim.alpha(1).restart();
+  }
+}
+
+// NEU: angewandten Cluster-Modus laden
+function applyCurrentClusterMode() {
+  const minConnectionsInput = document.getElementById('min-connections');
+  const minConnections = +minConnectionsInput?.value || 3;
+
+  if (!clusterEnabled || currentClusterMode === 'none') {
+    disableTagClustering();
+    if (currentLayout === 'graph') resetGraphLayout();
+    return;
+  }
+
+  if (currentClusterMode === 'tag-based') {
+    applyTagClustering();
+  } else if (currentClusterMode === 'connection-based') {
+    dynamicClusterAdaptation(minConnections);
+  } else if (currentClusterMode === 'manual') {
+    applyManualClustering();
+  }
+}
+
+// NEU: TreeView-Stil umschalten
+function toggleTreeViewStyle(styleClass) {
+  const svg = d3.select('svg');
+  svg.classed('tree-view-compact', false)
+     .classed('tree-view-highlight', false)
+     .classed(`tree-view-${styleClass}`, true);
+  currentTreeViewStyle = styleClass; // Zustand speichern
+
+  // Cluster-Gruppierung beeinflussen
+  if (currentLayout === 'tree') {
+    if (styleClass === 'highlight') {
+      // Bei "Hervorheben" Cluster deaktivieren
+      clusterEnabled = false;
+      disableTagClustering();
+      const clusterToggle = document.getElementById('cluster-toggle');
+      if (clusterToggle) {
+        clusterToggle.classList.remove('toggle-btn--active');
+      }
+    } else {
+      // Bei "Kompakt" Cluster-Status beibehalten
+      // (falls zuvor aktiviert, bleibt es aktiv)
+      if (clusterEnabled) {
+        applyTagClustering(+minConnectionsInput.value);
+      } else {
+        disableTagClustering();
+      }
+    }
+  }
+  saveAllSettings(); // Einstellungen speichern
 }
 
 function initializeForceGraph(data) {
@@ -671,6 +1262,15 @@ function initializeForceGraph(data) {
       })
     .on("end", (event, d) => {
       if (!event.active) simulation.alphaTarget(0); // Simulation abkühlen lassen
+      // Manuelle Gruppierung logik hier einfügen (z.B. Knoten an Zielposition fixieren)
+      // Beispiel: Wenn ein Knoten auf einen anderen Knoten gezogen wird, gruppiere sie
+      const targetNode = findTargetNode(event.x, event.y, nodes, d); // Hilfsfunktion
+      if (targetNode && currentClusterMode === 'manual' && clusterEnabled) {
+        d.manualGroup = targetNode.manualGroup || targetNode.id;
+        d.clusterId = d.manualGroup;
+        applyManualClustering();
+      }
+
       // Nur lösen, wenn Fixierung AUS ist
       if (!stickyNodesEnabled) {
         d.fx = null;
@@ -771,27 +1371,124 @@ function initializeForceGraph(data) {
   window.lastSimulation = simulation;
 
   // Setup gemeinsame Suchleiste
-  setupSearchBar(
-    g,
-    nodes,
-    links,
-    n => n.id,
-    (matches, selectOnlyOne) => {
-      const matchSet = new Set(matches.map(n => n.id));
-      g.selectAll(".node").style("opacity", n => matchSet.has(n.id) ? 1 : 0.15);
-      g.selectAll(".link").style("opacity", l => matchSet.has(l.source.id) && matchSet.has(l.target.id) ? 1 : 0.15);
-      if (selectOnlyOne && matches.length === 1) {
-        g.selectAll(".node").filter(d => d.id === matches[0].id).dispatch("click");
-      }
-    },
-    () => {
-      g.selectAll(".node").style("opacity", 1);
-      g.selectAll(".link").style("opacity", 1);
-    },
-    n => {
-      document.getElementById("info-bar").innerHTML = `<span class="path">${n.id}</span>`;
+  const searchInput = document.getElementById("search-input");
+  const searchBtn = document.getElementById("search-btn");
+  const resetBtn = document.getElementById("reset-btn");
+  const searchResults = document.getElementById("search-results");
+  const infoBar = document.getElementById("info-bar");
+  
+  function highlightMatch(text, query) {
+    if (!query) return text;
+    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')})`, "gi");
+    return text.replace(re, '<span class="search-highlight">$1</span>');
+  }
+
+  function showSearchResults(query) {
+    const showResults = query && query.length > 0;
+    searchResults.style.display = showResults ? "block" : "none";
+    if (!query) {
+      searchResults.innerHTML = "";
+      infoBar.innerHTML = "";
+      resetGraphSelection(g);
+      return;
     }
-  );
+    const matches = nodes.filter(n => (n.data?.name || n.id || "").toLowerCase().includes(query.toLowerCase()));
+    if (matches.length === 0) {
+      searchResults.innerHTML = `<div style="color:#d00;">Keine Treffer gefunden.</div>`;
+      infoBar.innerHTML = `<span style="color:#d00;">Keine Treffer gefunden.</span>`;
+      g.selectAll(".node").style("opacity", 0.15);
+      g.selectAll(".link").style("opacity", 0.15);
+      return;
+    }
+    searchResults.innerHTML = matches.map((n) => {
+      let path = n.id;
+      return `<div class="search-result" data-id="${n.id}">${highlightMatch(path, query)}</div>`;
+    }).join("");
+    const matchSet = new Set(matches.map(n => n.id));
+    g.selectAll(".node").style("opacity", n => matchSet.has(n.id) ? 1 : 0.15);
+    g.selectAll(".link").style("opacity", 0.15);
+  }
+
+  searchBtn.onclick = () => showSearchResults(searchInput.value);
+  searchInput.oninput = () => showSearchResults(searchInput.value);
+  resetBtn.onclick = () => {
+    searchInput.value = "";
+    searchResults.style.display = "none";
+    infoBar.innerHTML = "";
+    resetGraphSelection(g);
+  };
+  
+  searchResults.onclick = (e) => {
+    if (e.target.classList.contains("search-result")) {
+      const id = e.target.getAttribute("data-id");
+      const n = nodes.find(n => n.id === id);
+      if (n) {
+        g.selectAll(".node").filter(d => d.id === id).dispatch("click");
+        searchResults.style.display = "none";
+      }
+    }
+  };
+}
+
+// NEU: Alle Einstellungen im LocalStorage speichern
+function saveAllSettings() {
+  const settings = {
+    treeViewStyle: currentTreeViewStyle,
+    graphSettings: graphSettings,
+    colorScheme: currentScheme,
+    showAllTexts: showAllTexts,
+    stickyNodesEnabled: stickyNodesEnabled,
+    showRelationLabels: window.showRelationLabels || false, // Sicherstellen, dass es definiert ist
+    clusterEnabled: clusterEnabled,
+    clusterMode: currentClusterMode
+  };
+  localStorage.setItem('mindmapSettings', JSON.stringify(settings));
+}
+
+// NEU: Alle Einstellungen aus LocalStorage laden
+function loadAllSettings() {
+  const saved = localStorage.getItem('mindmapSettings');
+  if (saved) {
+    const settings = JSON.parse(saved);
+
+    // TreeView-Stil
+    currentTreeViewStyle = settings.treeViewStyle === 'default'
+      ? 'compact'
+      : (settings.treeViewStyle ?? 'compact');
+    // graphSettings
+    Object.assign(graphSettings, settings.graphSettings ?? {});
+    // Farbschema
+    currentScheme = settings.colorScheme ?? 'category10';
+    // showAllTexts
+    showAllTexts = settings.showAllTexts ?? false;
+    // stickyNodesEnabled
+    stickyNodesEnabled = settings.stickyNodesEnabled ?? true;
+    // showRelationLabels
+    window.showRelationLabels = settings.showRelationLabels ?? false;
+    // Cluster-Einstellungen
+    clusterEnabled = settings.clusterEnabled ?? false;
+    currentClusterMode = settings.clusterMode ?? 'none';
+
+    // UI-Elemente aktualisieren
+    loadSettingsToSliders(); // Slider-Werte setzen
+    document.getElementById('darkmode-toggle').classList.toggle('toggle-btn--active', document.body.classList.contains('dark-mode'));
+    document.getElementById('showall-toggle').classList.toggle('toggle-btn--active', showAllTexts);
+    document.getElementById('sticky-nodes-toggle').classList.toggle('toggle-btn--active', stickyNodesEnabled);
+    const relationsToggle = document.getElementById('relations-toggle');
+    if (relationsToggle) {
+      relationsToggle.classList.toggle('toggle-btn--active', window.showRelationLabels);
+    }
+    const clusterToggleBtn = document.getElementById('cluster-toggle');
+    if (clusterToggleBtn) {
+      clusterToggleBtn.classList.toggle('toggle-btn--active', clusterEnabled);
+    }
+    const clusterSelect = document.getElementById('cluster-mode-select');
+    if (clusterSelect) {
+      clusterSelect.value = currentClusterMode;
+    }
+    // Initialen TreeView-Stil anwenden
+    toggleTreeViewStyle(currentTreeViewStyle);
+  }
 }
 
 // === Hilfsfunktionen ===
@@ -880,6 +1577,9 @@ function loadCurrentData() {
         setTimeout(() => {
           centerGraphOrTree();
           d3.select('svg').style('opacity', 1);
+          if (clusterEnabled && currentClusterMode !== 'none') {
+            applyCurrentClusterMode();
+          }
         }, 100);
       } else {
         // Nur Graph vorhanden: Hierarchie aus 'leitet'-Kanten rekonstruieren
@@ -887,6 +1587,9 @@ function loadCurrentData() {
         setTimeout(() => {
           centerGraphOrTree();
           d3.select('svg').style('opacity', 1);
+          if (clusterEnabled && currentClusterMode !== 'none') {
+            applyCurrentClusterMode();
+          }
         }, 100);
       }
     } catch (e) {
@@ -966,26 +1669,37 @@ function loadDataAndRender(data, hierarchy) {
 
 window.addEventListener('DOMContentLoaded', () => {
   // === DOM References ===
-  const markdownEditor = document.getElementById('markdown-editor');
-  const paletteToggle = document.getElementById('palette-toggle');
-  const paletteMenu = document.getElementById('palette-menu');
-  const exportToggle = document.getElementById('export-toggle');
-  const exportBar = document.getElementById('export-bar');
-  const darkToggle = document.getElementById('darkmode-toggle');
-  const body = document.body;
-  const editToggle = document.getElementById('edit-toggle');
-  const editorContainer = document.getElementById('editor-container');
-  const closeEditor = document.getElementById('close-editor');
-  const fullscreenToggle = document.getElementById('fullscreen-toggle');
-  const showAllToggle = document.getElementById('showall-toggle');
-  const graphmodeToggle = document.getElementById('graphmode-toggle');
-  const importToggle = document.getElementById('import-toggle');
-  const importFile = document.getElementById('import-file');
-  const clearToggle = document.getElementById('clear-toggle');
-  const stickyNodesToggle = document.getElementById('sticky-nodes-toggle');
-  const searchToggle = document.getElementById('search-toggle');
-  const searchBar = document.getElementById('search-bar');
-  const searchResults = document.getElementById('search-results');
+  markdownEditor = document.getElementById('markdown-editor');
+  paletteToggle = document.getElementById('palette-toggle');
+  paletteMenu = document.getElementById('palette-menu');
+  exportToggle = document.getElementById('export-toggle');
+  exportBar = document.getElementById('export-bar');
+  darkToggle = document.getElementById('darkmode-toggle');
+  body = document.body;
+  const editToggle = document.getElementById('edit-toggle'); // Bleibt lokal
+  editorContainer = document.getElementById('editor-container');
+  const closeEditor = document.getElementById('close-editor'); // Bleibt lokal
+  const fullscreenToggle = document.getElementById('fullscreen-toggle'); // Bleibt lokal
+  showAllToggle = document.getElementById('showall-toggle');
+  const graphmodeToggle = document.getElementById('graphmode-toggle'); // Bleibt lokal
+  const importToggle = document.getElementById('import-toggle'); // Bleibt lokal
+  const importFile = document.getElementById('import-file'); // Bleibt lokal
+  const clearToggle = document.getElementById('clear-toggle'); // Bleibt lokal
+  stickyNodesToggle = document.getElementById('sticky-nodes-toggle');
+  searchToggle = document.getElementById('search-toggle');
+  searchBar = document.getElementById('search-bar');
+  searchResults = document.getElementById('search-results');
+  viewStyleToggle = document.getElementById('view-style-toggle'); // Global
+  viewStyleMenu = document.getElementById('view-style-menu'); // Global
+  clusterToggle = document.getElementById('cluster-toggle'); // Global
+  relationsToggle = document.getElementById('relations-toggle'); // Global
+  settingsToggle = document.getElementById('settings-toggle'); // Global
+  infoToggle = document.getElementById('info-toggle'); // Global
+  infoMenu = document.getElementById('info-menu'); // Global
+  minConnectionsInput = document.getElementById('min-connections');
+
+  // Einstellungen aus LocalStorage anwenden
+  loadAllSettings();
 
   // --- Export-Button ---
   exportToggle.addEventListener('click', (e) => {
@@ -1112,15 +1826,29 @@ window.addEventListener('DOMContentLoaded', () => {
   graphmodeToggle.addEventListener('click', (e) => {
     e.stopPropagation();
     currentLayout = (currentLayout === 'tree') ? 'graph' : 'tree';
+    resetClusterState(); // NEU: Cluster-Modus zurücksetzen bei Layout-Wechsel
+
+    const clusterToggle = document.getElementById('cluster-toggle'); // NEU: Referenz zum Cluster-Button
+
     if (currentLayout === 'graph') {
       if (currentGraph) {
         initializeForceGraph(currentGraph);
         setTimeout(centerGraphOrTree, 400);
       }
-    } else {
+      // NEU: Cluster-Button im GraphView aktivieren
+      if (clusterToggle) {
+        clusterToggle.disabled = false;
+        clusterToggle.classList.remove('toggle-btn--disabled');
+      }
+    } else { // currentLayout === 'tree'
       if (currentHierarchy) {
         initializeTree(currentHierarchy);
         setTimeout(centerGraphOrTree, 400);
+      }
+      // Cluster-Button auch im TreeView verfügbar
+      if (clusterToggle) {
+        clusterToggle.disabled = false;
+        clusterToggle.classList.remove('toggle-btn--disabled');
       }
     }
   });
@@ -1140,6 +1868,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showAllTexts = !showAllTexts;
     showAllToggle.classList.toggle('toggle-btn--active', showAllTexts);
     const svg = d3.select('svg');
+    const g = svg.select('g'); // Dynamically select current group element
     svg.selectAll('.node text').style('opacity', showAllTexts ? 1 : 0);
     // Nach showAllTexts ggf. auch:
     g.selectAll('.link-label').style('font-size', (graphSettings.nodeTextSize - 2) + 'px'); // NEU
@@ -1154,22 +1883,12 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   // --- Palette-Buttons: Farbschema wechseln ---
   document.querySelectorAll('.palette-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', () => {
       currentScheme = btn.getAttribute('data-scheme');
       paletteMenu.classList.add('is-hidden');
       paletteToggle.classList.remove('toggle-btn--active');
-      if (currentGraph && currentLayout === 'graph') {
-        initializeForceGraph(currentGraph);
-      } else if (currentHierarchy && currentLayout === 'tree') {
-        initializeTree(currentHierarchy);
-      } else if (currentGraph && currentLayout === 'tree') {
-        initializeTree(currentGraph);
-      }
-      // --- Ensure graph is visible and centered after color change ---
-      setTimeout(() => {
-        centerGraphOrTree();
-        d3.select('svg').style('opacity', 1);
-      }, 100);
+      applyColorScheme();
+      saveAllSettings();
     });
   });
   // --- Darkmode-Button ---
@@ -1180,7 +1899,6 @@ window.addEventListener('DOMContentLoaded', () => {
     darkToggle.classList.toggle('toggle-btn--active', body.classList.contains('dark-mode'));
   });
   // --- Relations-Toggle (optional, falls vorhanden) ---
-  const relationsToggle = document.getElementById('relations-toggle');
   if (relationsToggle) {
     relationsToggle.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1224,14 +1942,79 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+
+  // --- Cluster-Toggle (Gruppierung der Knoten) ---
+clusterToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+
+  if (currentLayout === 'graph') {
+    clusterEnabled = !clusterEnabled;
+    clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
+
+    if (clusterEnabled) {
+      // Originalpositionen und Daten sichern
+      window.lastSimulation.nodes().forEach(node => {
+        originalNodePositions.set(node.id, { x: node.x, y: node.y });
+      });
+      originalGraphNodes = currentGraph.nodes.map(n => ({ ...n }));
+      originalGraphLinks = currentGraph.links.map(l => ({ ...l }));
+
+      applyHierarchicalLayoutForGraphView();
+    } else {
+      resetGraphLayout();
+      if (originalGraphNodes && originalGraphLinks) {
+        loadDataAndRender({ nodes: originalGraphNodes, links: originalGraphLinks }, currentHierarchy);
+      }
+    }
+  } else {
+    // Tree-View: Tag- oder Verbindungsbasierte Gruppierung
+    clusterEnabled = !clusterEnabled;
+    clusterToggle.classList.toggle('toggle-btn--active', clusterEnabled);
+
+    if (clusterEnabled) {
+      if (currentClusterMode === 'none') {
+        currentClusterMode = 'tag-based';
+        const select = document.getElementById('cluster-mode-select');
+        if (select) select.value = currentClusterMode;
+      }
+      applyCurrentClusterMode();
+    } else {
+      disableTagClustering();
+    }
+  }
+  saveAllSettings();
+});
+
+
+  // --- View Style Toggle (Tree view variations) ---
+  viewStyleToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    viewStyleMenu.classList.toggle('is-hidden');
+    viewStyleToggle.classList.toggle('toggle-btn--active', !viewStyleMenu.classList.contains('is-hidden'));
+    paletteMenu.classList.add('is-hidden');
+    paletteToggle.classList.remove('toggle-btn--active');
+    exportBar.classList.add('is-hidden');
+    exportToggle.classList.remove('toggle-btn--active');
+  });
+  viewStyleMenu.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const style = item.getAttribute('data-style');
+      toggleTreeViewStyle(style);
+      viewStyleMenu.classList.add('is-hidden');
+      viewStyleToggle.classList.remove('toggle-btn--active');
+    });
+  });
   // --- Search-Button ---
   searchToggle.addEventListener("click", (e) => {
     e.stopPropagation();
     const hidden = searchBar.classList.toggle("is-hidden");
     searchToggle.classList.toggle("toggle-btn--active", !hidden);
     searchToggle.classList.toggle("is-hidden", !hidden);
-    searchToggle.classList.toggle("is-hidden", !hidden);
+    if (!hidden) {
+      document.getElementById('search-input').focus();
+    }
   });
+
 
   // --- Klick außerhalb schließt Menüs ---
   document.addEventListener('click', (e) => {
@@ -1259,7 +2042,17 @@ window.addEventListener('DOMContentLoaded', () => {
       searchToggle.classList.remove("toggle-btn--active");
       searchToggle.classList.remove("is-hidden");
       if (searchResults) searchResults.style.display = "none";
-      searchToggle.classList.remove("is-hidden");
+    }
+    // NEU: View Style Toggle
+    if (!viewStyleMenu.contains(e.target) && e.target !== viewStyleToggle) {
+      viewStyleMenu.classList.add('is-hidden');
+      viewStyleToggle.classList.remove('toggle-btn--active');
+    }
+    // NEU: Cluster-Toggle (nur für den Fall, dass der Button nicht existiert)
+    if (clusterToggle && !clusterToggle.contains(e.target)) {
+      // Wenn der Cluster-Modus aktiv ist und außerhalb geklickt wird,
+      // soll er nicht deaktiviert werden, es sei denn, es ist ein Klick auf den Button selbst.
+      // Die Deaktivierung erfolgt nur durch erneutes Klicken des Buttons.
     }
   });
   // --- Export-Funktionen ---
@@ -1363,7 +2156,7 @@ window.addEventListener('DOMContentLoaded', () => {
           // Undo
           if (undoStack.length > 0) {
             const state = undoStack.pop();
-            redoStack.push({ value: editor.value, selectionStart: editor.selectionStart, selectionEnd: editor.selectionEnd });
+            redoStack.push({ value: editor.value, selectionStart: editor.selectionStart, end: editor.selectionEnd });
             editor.value = state.value;
             editor.selectionStart = state.selectionStart;
             editor.selectionEnd = state.selectionEnd;
@@ -1383,7 +2176,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Finde die aktuelle Zeile
         const lines = before.split('\n');
         const prevLine = lines[lines.length-1] || '';
-        const match = prevLine.match(/^([\t]*)(- |\* |\+ |• )?/);
+        const match = prevLine.match(/^([\t]*)(- |\* |\+ |• )$/);
         let indent = match ? match[1] : '';
         let bullet = match && match[2] ? match[2] : '- ';
         // Wenn Zeile leer, dann nur Einrückung und Bullet
@@ -1462,7 +2255,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Settings-Button & Menü ---
-  const settingsToggle = document.getElementById('settings-toggle');
   const settingsMenu = document.getElementById('settings-menu');
   const closeSettings = document.getElementById('close-settings');
   // Slider-Referenzen
@@ -1484,6 +2276,17 @@ window.addEventListener('DOMContentLoaded', () => {
   settingsToggle.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsMenu.classList.toggle('is-hidden');
+    // Andere Menüs schließen
+    paletteMenu.classList.add('is-hidden');
+    paletteToggle.classList.remove('toggle-btn--active');
+    exportBar.classList.add('is-hidden');
+    exportToggle.classList.remove('toggle-btn--active');
+    viewStyleMenu.classList.add('is-hidden');
+    viewStyleToggle.classList.remove('toggle-btn--active');
+    infoMenu.classList.add('is-hidden');
+    searchBar.classList.add('is-hidden');
+    searchToggle.classList.remove('toggle-btn--active');
+    searchToggle.classList.remove('is-hidden');
   });
   closeSettings.addEventListener('click', (e) => {
     settingsMenu.classList.add('is-hidden');
@@ -1491,7 +2294,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Schließen bei Klick außerhalb
   document.addEventListener('mousedown', (e) => {
     if (!settingsMenu.classList.contains('is-hidden') && !settingsMenu.contains(e.target) && e.target !== settingsToggle) {
-      settingsMenu.classList.add('is-hidden');
+      settingsMenu.classList.add("is-hidden");
     }
   });
   // Werte synchronisieren (Slider → Label)
@@ -1510,16 +2313,11 @@ window.addEventListener('DOMContentLoaded', () => {
   sliderCollision.addEventListener('input', updateSliderLabels);
   sliderNodeTextSize.addEventListener('input', updateSliderLabels); // NEU
   updateSliderLabels();
-  // Settings-Menu: Slider-Events
+  // Settings-Menu: Slider-Events (Live-Update)
   function onSettingsChange() {
-    applySettingsFromSliders();
+    applySettingsFromSliders(); // Speichert auch in LocalStorage
     updateSliderLabels();
-    // Graph/Tree neu rendern mit aktuellen Settings
-    if (currentLayout === 'graph') {
-      if (currentGraph) loadDataAndRender(currentGraph, currentHierarchy);
-    } else {
-      if (currentHierarchy) loadDataAndRender(currentGraph, currentHierarchy);
-    }
+    updateSimulationSettings(); // Aktualisiert die Simulation ohne Neuladen
   }
   sliderLinkDistance.addEventListener('input', onSettingsChange);
   sliderNodeSize.addEventListener('input', onSettingsChange);
@@ -1527,13 +2325,11 @@ window.addEventListener('DOMContentLoaded', () => {
   sliderAnimDuration.addEventListener('input', onSettingsChange);
   sliderCollision.addEventListener('input', onSettingsChange);
   sliderNodeTextSize.addEventListener('input', onSettingsChange); // NEU
-  // Settings aus localStorage laden
+  // Settings aus localStorage laden (nur UI)
   loadSettingsToSliders();
   updateSliderLabels();
 
   // --- Info-Button & Info-Menü ---
-  const infoToggle = document.getElementById('info-toggle');
-  const infoMenu = document.getElementById('info-menu');
   const closeInfoMenu = document.getElementById('close-info-menu');
   const infoMenuList = document.getElementById('info-menu-list');
   const infoMenuMdContent = document.getElementById('info-menu-md-content');
@@ -1620,8 +2416,48 @@ window.addEventListener('DOMContentLoaded', () => {
   // Schließen bei Klick außerhalb
   document.addEventListener('mousedown', (e) => {
     if (!infoMenu.classList.contains('is-hidden') && !infoMenu.contains(e.target) && e.target !== infoToggle) {
-      infoMenu.classList.add('is-hidden');
+      infoMenu.classList.add("is-hidden");
     }
+  });
+
+  // --- Benutzerdefinierte Cluster-Regeln (Live-Update) ---
+  // Entferne den applyClusterRulesBtn, da Änderungen live angewendet werden sollen
+  const applyClusterRulesBtn = document.getElementById('apply-cluster-rules');
+  if (applyClusterRulesBtn) applyClusterRulesBtn.remove();
+
+  minConnectionsInput.addEventListener('input', () => {
+    const minConnections = +minConnectionsInput.value;
+    if (currentLayout === 'tree') {
+      // Im Tree-View: Tag-basierte Gruppierung mit dynamischer Adaptierung
+      applyTagClustering(minConnections);
+    } else {
+      // Im Graph-View: Dynamische Cluster-Adaptierung
+      dynamicClusterAdaptation(minConnections);
+    }
+  });
+
+  // --- Cluster-Modus Auswahl ---
+  const clusterModeSelect = document.getElementById('cluster-mode-select');
+  clusterModeSelect.addEventListener('change', () => {
+    const selectedMode = clusterModeSelect.value;
+    currentClusterMode = selectedMode;
+    clusterEnabled = false; // Zuerst alle Cluster deaktivieren
+
+    if (selectedMode === 'tag-based') {
+      clusterEnabled = true;
+      applyTagClustering(+minConnectionsInput.value);
+    } else if (selectedMode === 'connection-based') {
+      clusterEnabled = true;
+      dynamicClusterAdaptation(+minConnectionsInput.value);
+    } else if (selectedMode === 'manual') {
+      clusterEnabled = true;
+      applyManualClustering();
+    } else { // 'none'
+      disableTagClustering(); // Deaktiviert auch dynamische Cluster
+    }
+    const btn = document.getElementById('cluster-toggle');
+    if (btn) btn.classList.toggle('toggle-btn--active', clusterEnabled);
+    saveAllSettings(); // Speichere den neuen Cluster-Modus
   });
 });
 
@@ -1693,4 +2529,26 @@ function resetGraphSelection(g) {
   }
   const infoBar = document.getElementById("info-bar");
   if (infoBar) infoBar.innerHTML = "";
+}
+
+// NEU: Hilfsfunktion zum Finden des Zielknotens beim Drag & Drop
+function findTargetNode(x, y, nodes, draggedNode) {
+  // Iteriere über alle Knoten außer dem gezogenen Knoten selbst
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node === draggedNode) continue;
+
+    // Berechne den Abstand zwischen dem Mauszeiger und dem Mittelpunkt des Knotens
+    const dx = x - node.x;
+    const dy = y - node.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Wenn der Mauszeiger innerhalb des Radius des Knotens ist, ist dies der Zielknoten
+    // Berücksichtige auch einen kleinen Puffer um den Knoten
+    const buffer = 10;
+    if (distance < node.r + buffer) {
+      return node;
+    }
+  }
+  return null; // Kein Zielknoten gefunden
 }

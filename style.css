@@ -93,6 +93,12 @@ body.dark-mode, html.dark-mode {
   color: #fff;
   box-shadow: 0 0 0 2px var(--accent, #4a90e2)33;
 }
+
+/* Disabled state for toggle buttons */
+.toggle-btn--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 .toggle-btn--relations { bottom: 156px; }
 .toggle-btn--palette   { bottom: 248px; }
 .toggle-btn--darkmode  { bottom: 294px; }
@@ -119,6 +125,7 @@ body.dark-mode, html.dark-mode {
 #clear-toggle { top: 156px; }
 #graphmode-toggle { top: 202px; }
 #sticky-nodes-toggle { top: 248px; } /* NEU */
+#cluster-toggle { top: 294px; }
 #relations-toggle { bottom: 156px; }
 #showall-toggle { bottom: 110px; }
 #palette-toggle { bottom: 64px; }
@@ -143,6 +150,18 @@ body.dark-mode, html.dark-mode {
   #controls-wrapper .toggle-btn {
     position: static;
     margin: 0;
+  }
+  /* Keep auxiliary buttons spaced from the main control bar */
+  #search-toggle {
+    top: 10px;
+    left: 10px;
+    right: auto;
+  }
+  #info-toggle {
+    top: 70px;
+    left: 10px;
+    right: auto;
+    bottom: auto;
   }
 }
 
@@ -387,6 +406,7 @@ body.dark-mode .palette-btn:hover, body.dark-mode .export-btn:hover {
   width: 480px; max-width: 98vw;
   box-shadow: var(--glass-shadow);
   border-radius: var(--glass-radius);
+  z-index: 1000;
 }
 body.dark-mode #search-bar {
   color: #f1f1f1;
@@ -572,6 +592,97 @@ body.dark-mode .settings-close-btn:hover {
   }
 }
 #settings-toggle { bottom: 294px; }
+
+#cluster-toggle {
+  /* Der Button selbst übernimmt die Standard-toggle-btn Farbe */
+}
+#cluster-toggle::before {
+  content: "➡️";
+  color: var(--palette-primary); /* Standardfarbe für das Icon */
+}
+#cluster-toggle.toggle-btn--active {
+  background: var(--accent, #4a90e2);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--accent, #4a90e2)33;
+}
+#cluster-toggle.toggle-btn--active::before {
+  color: #fff; /* Iconfarbe im aktiven Zustand */
+}
+
+/* --- View Style Toggle & Menu --- */
+#view-style-toggle {
+  top: 340px; /* Position unterhalb von cluster-toggle */
+}
+#view-style-toggle span {
+  line-height: 1;
+}
+#view-style-menu {
+  position: absolute;
+  top: 0; /* Wird per JS relativ zum Button positioniert */
+  right: 0;
+  min-width: 180px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
+  z-index: 1000;
+}
+#view-style-menu.is-hidden {
+  display: none !important;
+}
+#view-style-menu:not(.is-hidden) {
+  display: flex !important;
+}
+.dropdown-item {
+  padding: 8px 12px;
+  border: var(--glass-border);
+  border-radius: var(--glass-radius);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  color: var(--palette-primary);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  min-height: 38px;
+  font-size: 15px;
+}
+.dropdown-item:hover {
+  background: var(--palette-primary);
+  color: #fff;
+  border: var(--glass-border);
+  outline: 2px solid var(--palette-primary);
+}
+body.dark-mode .dropdown-item {
+  background: var(--glass-bg);
+  color: var(--palette-dark-text);
+  border: var(--glass-border);
+}
+body.dark-mode .dropdown-item:hover {
+  background: var(--palette-accent);
+  color: #222;
+  border: var(--glass-border);
+}
+
+/* --- TreeView Variations --- */
+.tree-view-compact .node circle {
+  r: 8px !important;
+}
+.tree-view-compact .node text {
+  font-size: 10px !important;
+}
+.tree-view-highlight .node circle {
+  transition: r 0.2s ease-out;
+}
+.tree-view-highlight .node text {
+  transition: opacity 0.2s ease-out;
+}
+.tree-view-highlight .node:hover circle {
+  r: 25px !important; /* Größerer Radius beim Hover */
+}
+.tree-view-highlight .node:hover text {
+  opacity: 1 !important; /* Text immer sichtbar beim Hover */
+}
 
 /* --- Info Button und Pop-up Menü --- */
 #info-menu {
